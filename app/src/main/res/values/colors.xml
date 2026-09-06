@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="liquid_bg">#0B0E14</color>
+    <color name="liquid_surface">#141923</color>
+    <color name="liquid_cyan">#00F5D4</color>
+    <color name="liquid_purple">#7928CA</color>
+</resources>
