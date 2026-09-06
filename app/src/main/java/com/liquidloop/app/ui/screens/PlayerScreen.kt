@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +28,11 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Waves
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -101,10 +108,10 @@ fun PlayerScreen(
             Column(
                 modifier = modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 20.dp)
+                    .systemBarsPadding()
+                    .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(18.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // 1. Track Info Header Card
                 TrackHeader(
@@ -171,6 +178,8 @@ fun PlayerScreen(
                 // 3. Precision Loop Tuning Controls
                 LoopControls(
                     loopState = loopState,
+                    durationMs = playbackState.durationMs,
+                    onLoopPointsChanged = { a, b -> viewModel.setLoopPoints(a, b) },
                     onNudgeA = { viewModel.nudgeLoopA(it) },
                     onNudgeB = { viewModel.nudgeLoopB(it) },
                     onSetAToCurrent = { viewModel.setPointAToCurrent() },
@@ -189,6 +198,15 @@ fun PlayerScreen(
                     onLaunchFloatingWidget = onLaunchFloatingWidget
                 )
 
+                // 5. Musical Tools (Pitch, Metronome)
+                MusicalControls(
+                    playbackState = playbackState,
+                    onPitchChange = { viewModel.setPitch(it) },
+                    onToggleMetronome = { viewModel.toggleMetronome() },
+                    onBpmChange = { viewModel.setBpm(it) },
+                    onTimeSignatureChange = { viewModel.setTimeSignature(it) }
+                )
+
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
@@ -200,6 +218,7 @@ fun LiquidTopBar() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -317,6 +336,75 @@ fun PiPPlayerContent(
                         modifier = Modifier.size(20.dp)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun MusicalControls(
+    playbackState: com.liquidloop.app.model.PlaybackState,
+    onPitchChange: (Float) -> Unit,
+    onToggleMetronome: () -> Unit,
+    onBpmChange: (Float) -> Unit,
+    onTimeSignatureChange: (Int) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = LiquidSurface),
+        border = BorderStroke(1.dp, LiquidCardBorder)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Pitch / Transpose
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(Icons.Default.Tune, contentDescription = "Pitch", tint = LiquidPurpleLight)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = "Pitch (Transpose): ${if (playbackState.pitch >= 1f) "+" else ""}${String.format(java.util.Locale.US, "%.1f", (playbackState.pitch - 1f) * 12f)} st", color = LiquidTextPrimary, fontSize = 13.sp)
+                    Slider(
+                        value = playbackState.pitch,
+                        onValueChange = onPitchChange,
+                        valueRange = 0.5f..2.0f,
+                        steps = 23,
+                        colors = androidx.compose.material3.SliderDefaults.colors(
+                            thumbColor = LiquidPurpleLight,
+                            activeTrackColor = LiquidPurpleLight.copy(alpha = 0.7f)
+                        )
+                    )
+                }
+            }
+
+            // Metronome
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(Icons.Default.Timer, contentDescription = "Metronome", tint = LiquidCyan)
+                    Column {
+                        Text(text = "Metronome Grid", color = LiquidTextPrimary, fontSize = 13.sp)
+                        Text(text = "${playbackState.bpm.toInt()} BPM  |  ${playbackState.timeSignature}/4", color = LiquidCyan, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                    }
+                }
+                
+                Switch(
+                    checked = playbackState.isMetronomeEnabled,
+                    onCheckedChange = { onToggleMetronome() },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = LiquidBackground,
+                        checkedTrackColor = LiquidCyan
+                    )
+                )
             }
         }
     }

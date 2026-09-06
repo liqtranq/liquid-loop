@@ -33,9 +33,9 @@ import com.liquidloop.app.model.PlaybackState
 import com.liquidloop.app.model.TrackInfo
 import com.liquidloop.app.ui.theme.LiquidCyan
 import com.liquidloop.app.ui.theme.LiquidCyanDim
-import com.liquidloop.app.ui.theme.LiquidPink
 import com.liquidloop.app.ui.theme.LiquidPurpleLight
 import com.liquidloop.app.ui.theme.LiquidSurfaceVariant
+import com.liquidloop.app.ui.theme.LiquidTextMuted
 import com.liquidloop.app.ui.theme.LoopRegionOverlay
 import com.liquidloop.app.ui.theme.MarkerAColor
 import com.liquidloop.app.ui.theme.MarkerBColor
@@ -167,6 +167,29 @@ fun WaveformCanvas(
                     end = Offset(bX, canvasHeight - 10f),
                     strokeWidth = 2f
                 )
+            }
+
+            // 2.5 Draw Beat Grid
+            val bpm = playbackState.bpm
+            val ts = playbackState.timeSignature
+            if (bpm > 0) {
+                val beatIntervalMs = (60000f / bpm)
+                var currentBeatMs = 0f
+                var beatCount = 0
+                while (currentBeatMs < durationMs) {
+                    val x = (currentBeatMs / durationMs) * canvasWidth
+                    val isDownbeat = (beatCount % ts == 0)
+                    
+                    drawLine(
+                        color = if (isDownbeat) LiquidPurpleLight.copy(alpha = 0.3f) else LiquidTextMuted.copy(alpha = 0.1f),
+                        start = Offset(x, 0f),
+                        end = Offset(x, canvasHeight),
+                        strokeWidth = if (isDownbeat) 2f else 1f
+                    )
+                    
+                    currentBeatMs += beatIntervalMs
+                    beatCount++
+                }
             }
 
             // 3. Draw Waveform Bars

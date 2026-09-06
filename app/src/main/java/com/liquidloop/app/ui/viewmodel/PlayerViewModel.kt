@@ -153,6 +153,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         audioController.setPlaybackSpeed(speed)
     }
 
+    fun setPitch(pitch: Float) {
+        audioController.setPitch(pitch)
+    }
+
+    fun toggleMetronome() {
+        audioController.toggleMetronome()
+    }
+
+    fun setBpm(bpm: Float) {
+        audioController.setBpm(bpm)
+    }
+
+    fun setTimeSignature(ts: Int) {
+        audioController.setTimeSignature(ts)
+    }
+
     fun setPictureInPicture(isInPiP: Boolean) {
         _isInPictureInPicture.value = isInPiP
     }

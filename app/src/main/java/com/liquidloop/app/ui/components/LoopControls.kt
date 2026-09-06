@@ -52,9 +52,16 @@ import com.liquidloop.app.ui.theme.LiquidTextSecondary
 import com.liquidloop.app.ui.theme.MarkerAColor
 import com.liquidloop.app.ui.theme.MarkerBColor
 
+import androidx.compose.material3.RangeSlider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoopControls(
     loopState: LoopState,
+    durationMs: Long,
+    onLoopPointsChanged: (Long, Long) -> Unit,
     onNudgeA: (Long) -> Unit,
     onNudgeB: (Long) -> Unit,
     onSetAToCurrent: () -> Unit,
@@ -67,6 +74,21 @@ fun LoopControls(
     ) {
         // Loop Summary Stats Pill
         LoopStatsBar(loopState = loopState)
+
+        if (durationMs > 0L) {
+            RangeSlider(
+                value = loopState.startMs.toFloat()..loopState.endMs.toFloat(),
+                onValueChange = { range ->
+                    onLoopPointsChanged(range.start.toLong(), range.endInclusive.toLong())
+                },
+                valueRange = 0f..durationMs.toFloat(),
+                modifier = Modifier.padding(horizontal = 8.dp),
+                colors = SliderDefaults.colors(
+                    thumbColor = LiquidCyan,
+                    activeTrackColor = LiquidPurpleLight
+                )
+            )
+        }
 
         // Marker A Fine Tuning Panel
         MarkerTuningPanel(

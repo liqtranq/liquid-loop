@@ -18,6 +18,8 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.liquidloop.app.model.LoopState
 import com.liquidloop.app.model.PlaybackState
 import com.liquidloop.app.model.TrackInfo
+import android.media.AudioManager
+import android.media.ToneGenerator
 import com.liquidloop.app.service.PlaybackService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,9 +49,47 @@ class LiquidAudioController(private val context: Context) {
 
     private val coroutineScope = CoroutineScope(Dispatchers.Main)
     private var progressPollingJob: Job? = null
+    
+    private var metronomeJob: Job? = null
+    private val toneGenerator = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
 
     init {
         connectToService()
+        startMetronomeTicker()
+    }
+
+    private fun startMetronomeTicker() {
+        metronomeJob?.cancel()
+        metronomeJob = coroutineScope.launch(Dispatchers.Default) {
+            var tickCount = 0
+            var nextTickTime = 0L
+
+            while (isActive) {
+                val state = _playbackState.value
+                if (state.isPlaying && state.isMetronomeEnabled) {
+                    val now = System.currentTimeMillis()
+                    if (now >= nextTickTime) {
+                        if (tickCount % state.timeSignature == 0) {
+                            toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 40)
+                        } else {
+                            toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP2, 40)
+                        }
+                        
+                        val bpm = state.bpm.coerceAtLeast(40f)
+                        val speed = state.playbackSpeed.coerceAtLeast(0.1f)
+                        val intervalMs = ((60000f / bpm) / speed).toLong()
+                        
+                        nextTickTime = now + intervalMs
+                        tickCount++
+                    }
+                    delay(10) // Small polling delay for high precision
+                } else {
+                    delay(50)
+                    tickCount = 0
+                    nextTickTime = 0L
+                }
+            }
+        }
     }
 
     private fun connectToService() {
@@ -89,7 +129,12 @@ class LiquidAudioController(private val context: Context) {
             }
 
             override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
-                _playbackState.update { it.copy(playbackSpeed = playbackParameters.speed) }
+                _playbackState.update { 
+                    it.copy(
+                        playbackSpeed = playbackParameters.speed,
+                        pitch = playbackParameters.pitch
+                    ) 
+                }
             }
         })
     }
@@ -242,8 +287,27 @@ class LiquidAudioController(private val context: Context) {
     }
 
     fun setPlaybackSpeed(speed: Float) {
-        mediaController?.playbackParameters = PlaybackParameters(speed)
+        val currentPitch = _playbackState.value.pitch
+        mediaController?.playbackParameters = PlaybackParameters(speed, currentPitch)
         _playbackState.update { it.copy(playbackSpeed = speed) }
+    }
+
+    fun setPitch(pitch: Float) {
+        val currentSpeed = _playbackState.value.playbackSpeed
+        mediaController?.playbackParameters = PlaybackParameters(currentSpeed, pitch)
+        _playbackState.update { it.copy(pitch = pitch) }
+    }
+    
+    fun toggleMetronome() {
+        _playbackState.update { it.copy(isMetronomeEnabled = !it.isMetronomeEnabled) }
+    }
+    
+    fun setBpm(bpm: Float) {
+        _playbackState.update { it.copy(bpm = bpm) }
+    }
+    
+    fun setTimeSignature(ts: Int) {
+        _playbackState.update { it.copy(timeSignature = ts) }
     }
 
     fun release() {
