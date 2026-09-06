@@ -1,35 +1,52 @@
-# LiquidLoop
+<div align="center">
 
-**LiquidLoop** is a specialized native Android audio player designed for musicians, poets, songwriters, and writers. It allows users to visually select a specific segment of a track (an A-B loop) and seamlessly play it in the background while they work on their lyrics or notes in other applications.
+# Liquid Converter
 
-## 🎵 Core Concept
-The app focuses on providing a gapless, precise looping experience. Whether you are writing lyrics to a beat, practicing a guitar solo, or drafting poetry over an ambient track, LiquidLoop ensures the chosen segment loops perfectly without interruption.
+**Специализированный аудиоплеер и инструмент для зацикливания отрезков.**
 
-## ✨ Features
-* **Interactive Waveform:** Visually select loop boundaries (A and B markers) directly on the track's waveform.
-* **Micro-Tuning:** Precisely adjust the start and end of the loop by ±50ms for absolute gapless playback.
-* **Background Playback & PiP:** Keep the music looping in the background or use the floating Picture-in-Picture (PiP) widget to control playback while using text editors or messengers.
-* **Liquid UI:** A sleek, dark Material 3 design crafted for focus and immersion.
-* **High-Precision Audio Engine:** Built on AndroidX Media3 (ExoPlayer) with a custom `LoopWatcher` to ensure micro-fade in/out and eliminate clicking sounds at loop boundaries.
+Интерактивная волна · Бесшовный лупинг · Микротюнинг · Фоновый режим
 
-## 🛠️ Technology Stack
-* **Language:** Kotlin
-* **UI:** Jetpack Compose, Material 3
-* **Audio:** AndroidX Media3 (ExoPlayer, MediaSessionService)
-* **Architecture:** MVVM, Clean Architecture
-* **Target:** Android (Min SDK 26, Target SDK 37)
+![release](https://img.shields.io/github/v/release/liqtranq/liquid-converter?label=release&color=orange)
+![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84.svg?logo=android)
+![License](https://img.shields.io/badge/License-MIT-blue)
 
-## 🚀 Getting Started
+[Скачать APK](https://github.com/liqtranq/liquid-converter/releases) · [Сообщить об ошибке](https://github.com/liqtranq/liquid-converter/issues)
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/liqtranq/liquid-loop.git
-   ```
-2. Open the project in **Android Studio**.
-3. Sync Gradle and run the app on an emulator or a physical device running Android 8.0+.
+</div>
 
-## 🤝 Contribution
-Feel free to open issues or submit pull requests if you want to improve the looping accuracy, add new audio processing features, or tweak the UI!
+## О проекте
 
-## 📄 License
-This project is licensed under the MIT License.
+Liquid Converter — это аудиоплеер для музыкантов, поэтов, сонграйтеров и писателей с расширенными возможностями фоновой работы. Слушайте музыку, выбирайте точный фрагмент (луп A-B) и оставляйте его играть по кругу без пауз, пока пишете текст в других приложениях.
+
+В оформлении — тёмные поверхности (Liquid UI), глубокие фиолетовые и неоново-синие акценты, создающие стильное пространство для творчества и фокуса.
+
+## Возможности
+
+| | Что умеет приложение |
+| --- | --- |
+| **Лупинг** | Бесшовное зацикливание A-B фрагментов аудио без щелчков и пауз |
+| **Управление** | Интерактивная волна (Waveform) для визуального выбора отрезков и микротюнинг (±50мс) для идеальной точности |
+| **Фоновый режим** | Воспроизведение в фоне, а также плавающий виджет Picture-in-Picture (PiP) для управления поверх других окон |
+| **Аудиодвижок** | Высокоточный движок на базе AndroidX Media3 (ExoPlayer) с кастомным LoopWatcher |
+
+## Установка
+
+Нужен Android 8.0 или новее. Откройте [релизы](https://github.com/liqtranq/liquid-converter/releases), выберите версию и скачайте APK. Файлы с `debug` в названии — тестовые сборки.
+
+Сборки Liquid Converter публикуются в этом репозитории.
+
+## Сборка из исходников
+
+Требуются JDK 17+ и Android SDK 37. Укажите путь к SDK в `local.properties` или через `ANDROID_HOME`.
+
+```bash
+git clone https://github.com/liqtranq/liquid-converter.git
+cd liquid-converter
+./gradlew :app:assembleDebug
+```
+
+На Windows используйте `./gradlew.bat`. APK появится в `app/build/outputs/apk/debug/`.
+
+## Лицензия
+
+[MIT License](https://github.com/liqtranq/liquid-converter/blob/main/LICENSE). 
