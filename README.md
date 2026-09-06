@@ -23,7 +23,7 @@ The app focuses on providing a gapless, precise looping experience. Whether you 
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/liqtranq/LiquidLoop.git
+   git clone https://github.com/liqtranq/liquid-loop.git
    ```
 2. Open the project in **Android Studio**.
 3. Sync Gradle and run the app on an emulator or a physical device running Android 8.0+.
