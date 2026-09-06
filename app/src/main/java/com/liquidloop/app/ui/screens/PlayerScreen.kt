@@ -397,14 +397,33 @@ fun MusicalControls(
                     }
                 }
                 
-                Switch(
-                    checked = playbackState.isMetronomeEnabled,
-                    onCheckedChange = { onToggleMetronome() },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = LiquidBackground,
-                        checkedTrackColor = LiquidCyan
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    androidx.compose.material3.IconButton(
+                        onClick = { onBpmChange((playbackState.bpm - 1).coerceAtLeast(40f)) },
+                        modifier = Modifier.size(32.dp).clip(CircleShape).background(LiquidSurfaceVariant)
+                    ) {
+                        Text("-", color = LiquidCyan, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                    
+                    Switch(
+                        checked = playbackState.isMetronomeEnabled,
+                        onCheckedChange = { onToggleMetronome() },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = LiquidBackground,
+                            checkedTrackColor = LiquidCyan
+                        )
                     )
-                )
+                    
+                    androidx.compose.material3.IconButton(
+                        onClick = { onBpmChange((playbackState.bpm + 1).coerceAtMost(300f)) },
+                        modifier = Modifier.size(32.dp).clip(CircleShape).background(LiquidSurfaceVariant)
+                    ) {
+                        Text("+", color = LiquidCyan, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }

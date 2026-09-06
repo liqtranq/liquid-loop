@@ -36,6 +36,10 @@ import com.liquidloop.app.ui.theme.LiquidCyanDim
 import com.liquidloop.app.ui.theme.LiquidPurpleLight
 import com.liquidloop.app.ui.theme.LiquidSurfaceVariant
 import com.liquidloop.app.ui.theme.LiquidTextMuted
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.drawscope.translate
 import com.liquidloop.app.ui.theme.LoopRegionOverlay
 import com.liquidloop.app.ui.theme.MarkerAColor
 import com.liquidloop.app.ui.theme.MarkerBColor
@@ -59,6 +63,8 @@ fun WaveformCanvas(
 ) {
     val durationMs = playbackState.durationMs.coerceAtLeast(1L)
     var activeDragTarget by remember { mutableStateOf(DragTarget.NONE) }
+    var scale by remember { androidx.compose.runtime.mutableFloatStateOf(1f) }
+    var offsetX by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
 
     Box(
         modifier = modifier
@@ -69,75 +75,51 @@ fun WaveformCanvas(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(waveform, durationMs, loopState) {
+                .pointerInput(Unit) {
+                    detectTransformGestures { centroid, pan, zoom, _ ->
+                        val oldScale = scale
+                        scale = (oldScale * zoom).coerceIn(1f, 20f)
+                        
+                        // Scale around centroid
+                        offsetX = (offsetX - centroid.x) * (scale / oldScale) + centroid.x
+                        
+                        // Add pan
+                        offsetX += pan.x
+                        
+                        // Bound offset
+                        val minOffset = -(size.width * scale - size.width)
+                        offsetX = offsetX.coerceIn(minOffset, 0f)
+                    }
+                }
+                .pointerInput(waveform, durationMs, scale, offsetX) {
                     detectTapGestures { offset ->
-                        val tapRatio = (offset.x / size.width).coerceIn(0f, 1f)
+                        val virtualWidth = size.width * scale
+                        val tapRatio = ((offset.x - offsetX) / virtualWidth).coerceIn(0f, 1f)
                         val tappedMs = (tapRatio * durationMs).toLong()
                         onSeek(tappedMs)
                     }
-                }
-                .pointerInput(waveform, durationMs, loopState) {
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            val aX = (loopState.startMs.toFloat() / durationMs) * size.width
-                            val bX = (loopState.endMs.toFloat() / durationMs) * size.width
-                            val touchRadius = 60f
-
-                            activeDragTarget = when {
-                                abs(offset.x - aX) <= touchRadius -> DragTarget.MARKER_A
-                                abs(offset.x - bX) <= touchRadius -> DragTarget.MARKER_B
-                                else -> DragTarget.PLAYHEAD
-                            }
-                        },
-                        onDragEnd = {
-                            activeDragTarget = DragTarget.NONE
-                        },
-                        onDragCancel = {
-                            activeDragTarget = DragTarget.NONE
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            val width = size.width.toFloat().coerceAtLeast(1f)
-                            val deltaMs = ((dragAmount.x / width) * durationMs).toLong()
-
-                            when (activeDragTarget) {
-                                DragTarget.MARKER_A -> {
-                                    val newStart = (loopState.startMs + deltaMs)
-                                        .coerceIn(0L, (loopState.endMs - 50L).coerceAtLeast(0L))
-                                    onLoopPointsChanged(newStart, loopState.endMs)
-                                }
-                                DragTarget.MARKER_B -> {
-                                    val newEnd = (loopState.endMs + deltaMs)
-                                        .coerceIn(loopState.startMs + 50L, durationMs)
-                                    onLoopPointsChanged(loopState.startMs, newEnd)
-                                }
-                                DragTarget.PLAYHEAD -> {
-                                    val currentX = (playbackState.currentPositionMs.toFloat() / durationMs) * width
-                                    val newX = (currentX + dragAmount.x).coerceIn(0f, width)
-                                    val newPos = ((newX / width) * durationMs).toLong()
-                                    onSeek(newPos)
-                                }
-                                DragTarget.NONE -> {}
-                            }
-                        }
-                    )
                 }
         ) {
             val canvasWidth = size.width
             val canvasHeight = size.height
             val centerY = canvasHeight / 2f
+            
+            val virtualWidth = canvasWidth * scale
 
-            // 1. Draw subtle background grid / track line
-            drawLine(
-                color = LiquidSurfaceVariant,
-                start = Offset(0f, centerY),
-                end = Offset(canvasWidth, centerY),
-                strokeWidth = 2f
-            )
+            withTransform({
+                translate(left = offsetX, top = 0f)
+            }) {
+                // 1. Draw subtle background grid / track line
+                drawLine(
+                    color = LiquidSurfaceVariant,
+                    start = Offset(0f, centerY),
+                    end = Offset(virtualWidth, centerY),
+                    strokeWidth = 2f
+                )
 
-            val aX = (loopState.startMs.toFloat() / durationMs) * canvasWidth
-            val bX = (loopState.endMs.toFloat() / durationMs) * canvasWidth
-            val playheadX = (playbackState.currentPositionMs.toFloat() / durationMs) * canvasWidth
+                val aX = (loopState.startMs.toFloat() / durationMs) * virtualWidth
+                val bX = (loopState.endMs.toFloat() / durationMs) * virtualWidth
+                val playheadX = (playbackState.currentPositionMs.toFloat() / durationMs) * virtualWidth
 
             // 2. Draw Active Loop Region Highlight
             if (loopState.isEnabled && bX > aX) {
@@ -177,7 +159,7 @@ fun WaveformCanvas(
                 var currentBeatMs = 0f
                 var beatCount = 0
                 while (currentBeatMs < durationMs) {
-                    val x = (currentBeatMs / durationMs) * canvasWidth
+                    val x = (currentBeatMs / durationMs) * virtualWidth
                     val isDownbeat = (beatCount % ts == 0)
                     
                     drawLine(
@@ -195,8 +177,8 @@ fun WaveformCanvas(
             // 3. Draw Waveform Bars
             val barsCount = waveform.size
             if (barsCount > 0) {
-                val barWidth = (canvasWidth / barsCount) * 0.7f
-                val barGap = (canvasWidth / barsCount) * 0.3f
+                val barWidth = (virtualWidth / barsCount) * 0.7f
+                val barGap = (virtualWidth / barsCount) * 0.3f
 
                 val maxBarHeight = (canvasHeight * 0.75f) / 2f
 
@@ -257,6 +239,7 @@ fun WaveformCanvas(
                 x = playheadX,
                 canvasHeight = canvasHeight
             )
+            } // close withTransform
         }
     }
 }
