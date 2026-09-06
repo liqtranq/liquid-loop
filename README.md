@@ -1,22 +1,22 @@
 <div align="center">
 
-# Liquid Converter
+# Liquid Loop
 
 **Специализированный аудиоплеер и инструмент для зацикливания отрезков.**
 
 Интерактивная волна · Бесшовный лупинг · Микротюнинг · Фоновый режим
 
-![release](https://img.shields.io/github/v/release/liqtranq/liquid-converter?label=release&color=orange)
+![release](https://img.shields.io/github/v/release/liqtranq/liquid-loop?label=release&color=orange)
 ![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84.svg?logo=android)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
-[Скачать APK](https://github.com/liqtranq/liquid-converter/releases) · [Сообщить об ошибке](https://github.com/liqtranq/liquid-converter/issues)
+[Скачать APK](https://github.com/liqtranq/liquid-loop/releases) · [Сообщить об ошибке](https://github.com/liqtranq/liquid-loop/issues)
 
 </div>
 
 ## О проекте
 
-Liquid Converter — это аудиоплеер для музыкантов, поэтов, сонграйтеров и писателей с расширенными возможностями фоновой работы. Слушайте музыку, выбирайте точный фрагмент (луп A-B) и оставляйте его играть по кругу без пауз, пока пишете текст в других приложениях.
+Liquid Loop — это аудиоплеер для музыкантов, поэтов, сонграйтеров и писателей с расширенными возможностями фоновой работы. Слушайте музыку, выбирайте точный фрагмент (луп A-B) и оставляйте его играть по кругу без пауз, пока пишете текст в других приложениях.
 
 В оформлении — тёмные поверхности (Liquid UI), глубокие фиолетовые и неоново-синие акценты, создающие стильное пространство для творчества и фокуса.
 
@@ -31,17 +31,17 @@ Liquid Converter — это аудиоплеер для музыкантов, п
 
 ## Установка
 
-Нужен Android 8.0 или новее. Откройте [релизы](https://github.com/liqtranq/liquid-converter/releases), выберите версию и скачайте APK. Файлы с `debug` в названии — тестовые сборки.
+Нужен Android 8.0 или новее. Откройте [релизы](https://github.com/liqtranq/liquid-loop/releases), выберите версию и скачайте APK. Файлы с `debug` в названии — тестовые сборки.
 
-Сборки Liquid Converter публикуются в этом репозитории.
+Сборки Liquid Loop публикуются в этом репозитории.
 
 ## Сборка из исходников
 
 Требуются JDK 17+ и Android SDK 37. Укажите путь к SDK в `local.properties` или через `ANDROID_HOME`.
 
 ```bash
-git clone https://github.com/liqtranq/liquid-converter.git
-cd liquid-converter
+git clone https://github.com/liqtranq/liquid-loop.git
+cd liquid-loop
 ./gradlew :app:assembleDebug
 ```
 
@@ -49,4 +49,4 @@ cd liquid-converter
 
 ## Лицензия
 
-[MIT License](https://github.com/liqtranq/liquid-converter/blob/main/LICENSE). 
+[MIT License](https://github.com/liqtranq/liquid-loop/blob/main/LICENSE). 
