@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/icon.jpg" width="128" height="128" style="border-radius: 20%">
+<img src="assets/icon.png" width="128" height="128">
 
 # Liquid Loop
 
