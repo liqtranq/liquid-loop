@@ -334,14 +334,26 @@ fun LiquidTopBar(
                 modifier = Modifier.pointerInput(Unit) {
                     awaitEachGesture {
                         val down = awaitFirstDown()
-                        showSettingsMenu = true
+                        val wasOpenBeforeTap = showSettingsMenu
+                        
+                        if (!wasOpenBeforeTap) {
+                            showSettingsMenu = true
+                        }
+                        
                         hoverIndex = -1
+                        var didDrag = false
+                        val startPos = down.position
                         
                         do {
                             val event = awaitPointerEvent()
                             val ptr = event.changes.firstOrNull { it.id == down.id }
                             if (ptr != null) {
                                 val y = ptr.position.y
+                                val dist = (ptr.position - startPos).getDistance()
+                                if (dist > 10f) {
+                                    didDrag = true
+                                }
+                                
                                 val topPadding = 40.dp.toPx()
                                 val itemHeight = 48.dp.toPx()
                                 
@@ -355,16 +367,25 @@ fun LiquidTopBar(
                         } while (event.changes.any { it.pressed })
                         
                         // Pointer released
-                        if (showSettingsMenu) {
-                            when (hoverIndex) {
-                                0 -> onToggleSpeedControl()
-                                1 -> onTogglePitchControl()
-                                2 -> onToggleMetronomeControl()
-                                3 -> onToggleBeatGrid()
+                        if (didDrag) {
+                            if (hoverIndex != -1) {
+                                when (hoverIndex) {
+                                    0 -> onToggleSpeedControl()
+                                    1 -> onTogglePitchControl()
+                                    2 -> onToggleMetronomeControl()
+                                    3 -> onToggleBeatGrid()
+                                }
+                                showSettingsMenu = false
+                            } else {
+                                showSettingsMenu = false
                             }
-                            showSettingsMenu = false
-                            hoverIndex = -1
+                        } else {
+                            // Tap behavior
+                            if (wasOpenBeforeTap) {
+                                showSettingsMenu = false
+                            }
                         }
+                        hoverIndex = -1
                     }
                 }
             ) {
@@ -384,7 +405,8 @@ fun LiquidTopBar(
                 if (showSettingsMenu) {
                     Popup(
                         alignment = Alignment.TopEnd,
-                        offset = androidx.compose.ui.unit.IntOffset(0, 100)
+                        offset = androidx.compose.ui.unit.IntOffset(0, 100),
+                        onDismissRequest = { showSettingsMenu = false }
                     ) {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = LiquidSurface),
@@ -406,6 +428,15 @@ fun LiquidTopBar(
                                             .fillMaxWidth()
                                             .height(48.dp)
                                             .background(if (isHovered) LiquidSurfaceVariant else Color.Transparent)
+                                            .clickable {
+                                                when (index) {
+                                                    0 -> onToggleSpeedControl()
+                                                    1 -> onTogglePitchControl()
+                                                    2 -> onToggleMetronomeControl()
+                                                    3 -> onToggleBeatGrid()
+                                                }
+                                                showSettingsMenu = false
+                                            }
                                             .padding(horizontal = 16.dp),
                                         contentAlignment = Alignment.CenterStart
                                     ) {

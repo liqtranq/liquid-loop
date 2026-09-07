@@ -217,40 +217,36 @@ class PlaybackService : MediaSessionService() {
                     val currentPos = player.currentPosition
 
                     // Check if we hit or exceeded Point B
-                    if (currentPos >= loopEndMs) {
-                        performSeamlessLoopJump()
+                    if (currentPos >= loopEndMs - 10) {
+                        if (!isMicroFading) {
+                            player.volume = 0f // aggressively cut volume to prevent click
+                        }
+                        player.seekTo(loopStartMs)
+                        
+                        // Ramp back smoothly to 1.0f over next frames
+                        serviceScope.launch {
+                            delay(5)
+                            player.volume = 0.3f
+                            delay(5)
+                            player.volume = 0.7f
+                            delay(5)
+                            player.volume = 1.0f
+                            isMicroFading = false
+                        }
                     } else if (currentPos < loopStartMs) {
-                        // If position is before Point A, snap to Point A
                         player.seekTo(loopStartMs)
                     } else {
-                        // Micro-fade out in last 12ms before Point B to prevent audio DC-clicks
+                        // Micro-fade out in last 30ms before Point B to prevent audio DC-clicks
                         val remaining = loopEndMs - currentPos
-                        if (remaining in 1..15 && !isMicroFading) {
-                            applyMicroFadeOut()
+                        if (remaining in 15..35 && !isMicroFading) {
+                            isMicroFading = true
+                            player.volume = 0.2f
                         }
                     }
                 }
-                delay(12) // 12ms check resolution for sub-frame loop boundary precision
+                delay(10) // 10ms check resolution for sub-frame loop boundary precision
             }
         }
-    }
-
-    private fun performSeamlessLoopJump() {
-        player.volume = 0.05f
-        player.seekTo(loopStartMs)
-        // Ramp back smoothly to 1.0f over next frames
-        serviceScope.launch {
-            delay(8)
-            player.volume = 0.5f
-            delay(8)
-            player.volume = 1.0f
-            isMicroFading = false
-        }
-    }
-
-    private fun applyMicroFadeOut() {
-        isMicroFading = true
-        player.volume = 0.3f
     }
 
     fun updateLoopPoints(startMs: Long, endMs: Long, enabled: Boolean = true) {
