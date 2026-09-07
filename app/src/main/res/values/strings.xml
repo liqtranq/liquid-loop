@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">LiquidLoop</string>
+    <string name="app_name">Liquid Loop</string>
     <string name="playback_channel_name">LiquidLoop Audio Playback</string>
     <string name="playback_channel_description">Active media playback and gapless loop controls</string>
     <string name="no_track_loaded">No track selected</string>
