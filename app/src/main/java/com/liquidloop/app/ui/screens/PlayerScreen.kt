@@ -292,11 +292,12 @@ fun LiquidTopBar(
             modifier = Modifier.clickable { onUpdateClick() }
         ) {
             androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(id = com.liquidloop.app.R.mipmap.ic_launcher),
+                painter = androidx.compose.ui.res.painterResource(id = com.liquidloop.app.R.mipmap.ic_launcher_foreground),
                 contentDescription = "Check for updates",
                 modifier = Modifier
                     .size(32.dp)
                     .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black)
             )
 
             Text(
