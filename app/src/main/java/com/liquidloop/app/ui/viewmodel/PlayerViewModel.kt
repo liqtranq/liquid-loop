@@ -41,7 +41,25 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val updateInfo: StateFlow<com.liquidloop.app.core.network.UpdateChecker.UpdateInfo?> = _updateInfo.asStateFlow()
 
     private val _manualUpdateInfo = MutableStateFlow<com.liquidloop.app.core.network.UpdateChecker.UpdateInfo?>(null)
-    val manualUpdateInfo: StateFlow<com.liquidloop.app.core.network.UpdateChecker.UpdateInfo?> = _manualUpdateInfo.asStateFlow()
+    val manualUpdateInfo = _manualUpdateInfo.asStateFlow()
+
+    // UI Settings
+    private val _showSpeedControl = MutableStateFlow(false)
+    val showSpeedControl = _showSpeedControl.asStateFlow()
+
+    private val _showPitchControl = MutableStateFlow(false)
+    val showPitchControl = _showPitchControl.asStateFlow()
+
+    private val _showMetronomeControl = MutableStateFlow(false)
+    val showMetronomeControl = _showMetronomeControl.asStateFlow()
+
+    private val _isBeatGridEnabled = MutableStateFlow(true)
+    val isBeatGridEnabled = _isBeatGridEnabled.asStateFlow()
+
+    fun toggleSpeedControl() { _showSpeedControl.value = !_showSpeedControl.value }
+    fun togglePitchControl() { _showPitchControl.value = !_showPitchControl.value }
+    fun toggleMetronomeControl() { _showMetronomeControl.value = !_showMetronomeControl.value }
+    fun toggleBeatGrid() { _isBeatGridEnabled.value = !_isBeatGridEnabled.value }
 
     init {
         checkForUpdates()
@@ -116,6 +134,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 Log.w("PlayerViewModel", "Failed to query filename from ContentResolver", e)
             }
 
+            var artwork: ByteArray? = null
+
             // 2. Extract media tags via MediaMetadataRetriever
             val retriever = MediaMetadataRetriever()
             try {
@@ -131,6 +151,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 if (!metaDuration.isNullOrBlank()) durationMs = metaDuration.toLongOrNull() ?: 0L
                 if (!metaMime.isNullOrBlank()) mimeType = metaMime
                 if (!metaBitrate.isNullOrBlank()) bitRate = metaBitrate.toLongOrNull()
+                
+                artwork = retriever.embeddedPicture
 
             } catch (e: Exception) {
                 Log.w("PlayerViewModel", "Failed to read ID3 metadata from retriever", e)
@@ -149,7 +171,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 durationMs = durationMs,
                 mimeType = mimeType ?: context.contentResolver.getType(uri),
                 bitRate = bitRate,
-                sampleRate = sampleRate
+                sampleRate = sampleRate,
+                artwork = artwork
             )
         }
 

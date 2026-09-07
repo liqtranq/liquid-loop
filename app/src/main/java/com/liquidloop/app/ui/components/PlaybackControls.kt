@@ -61,6 +61,7 @@ fun PlaybackControls(
     onRestartLoop: () -> Unit,
     onToggleLoop: () -> Unit,
     onSpeedChange: (Float) -> Unit,
+    showSpeedControl: Boolean,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -69,10 +70,12 @@ fun PlaybackControls(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Speed selector chips
-        SpeedSelectorRow(
-            currentSpeed = playbackState.playbackSpeed,
-            onSpeedChange = onSpeedChange
-        )
+        if (showSpeedControl) {
+            SpeedSelectorRow(
+                currentSpeed = playbackState.playbackSpeed,
+                onSpeedChange = onSpeedChange
+            )
+        }
 
         // Main action row
         Row(

@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/icon.jpg" width="128" height="128" style="border-radius: 20%">
+
 # Liquid Loop
 
 **Специализированный аудиоплеер и инструмент для зацикливания отрезков.**

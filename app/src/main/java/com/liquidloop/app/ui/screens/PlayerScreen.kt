@@ -92,6 +92,11 @@ fun PlayerScreen(
     val isInPiP by viewModel.isInPictureInPicture.collectAsState()
     val updateInfo by viewModel.updateInfo.collectAsState()
     val manualUpdateInfo by viewModel.manualUpdateInfo.collectAsState()
+    
+    val showSpeedControl by viewModel.showSpeedControl.collectAsState()
+    val showPitchControl by viewModel.showPitchControl.collectAsState()
+    val showMetronomeControl by viewModel.showMetronomeControl.collectAsState()
+    val isBeatGridEnabled by viewModel.isBeatGridEnabled.collectAsState()
 
     updateInfo?.let { info ->
         UpdateDialog(
@@ -113,7 +118,15 @@ fun PlayerScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(text = "Version ${info.latestVersion}", fontWeight = FontWeight.SemiBold)
                     Text(text = "What's new:", color = LiquidTextSecondary, fontSize = 12.sp)
-                    Text(text = info.releaseNotes, fontSize = 14.sp)
+                    val cleanNotes = info.releaseNotes
+                        .replace(Regex("(?m)^#+\\s*"), "") // remove headers
+                        .replace(Regex("\\*\\*(.*?)\\*\\*"), "$1") // remove bold
+                        .replace(Regex("__(.*?)__"), "$1") // remove bold
+                        .replace(Regex("\\*(.*?)\\*"), "$1") // remove italic
+                        .replace(Regex("_(.*?)_"), "$1") // remove italic
+                        .replace(Regex("`([^`]+)`"), "$1") // remove code
+                        .replace(Regex("\\[(.*?)\\]\\(.*?\\)"), "$1") // remove links
+                    Text(text = cleanNotes, fontSize = 14.sp)
                 }
             },
             confirmButton = {
@@ -141,8 +154,14 @@ fun PlayerScreen(
             topBar = {
                 LiquidTopBar(
                     onUpdateClick = { viewModel.checkUpdatesManually() },
-                    onLaunchPiP = onEnterPiP,
-                    onLaunchFloatingWidget = onLaunchFloatingWidget
+                    showSpeedControl = showSpeedControl,
+                    showPitchControl = showPitchControl,
+                    showMetronomeControl = showMetronomeControl,
+                    isBeatGridEnabled = isBeatGridEnabled,
+                    onToggleSpeedControl = { viewModel.toggleSpeedControl() },
+                    onTogglePitchControl = { viewModel.togglePitchControl() },
+                    onToggleMetronomeControl = { viewModel.toggleMetronomeControl() },
+                    onToggleBeatGrid = { viewModel.toggleBeatGrid() }
                 )
             }
         ) { innerPadding ->
@@ -201,6 +220,7 @@ fun PlayerScreen(
                                 waveform = waveform,
                                 playbackState = playbackState,
                                 loopState = loopState,
+                                isBeatGridEnabled = isBeatGridEnabled,
                                 onSeek = { viewModel.seekTo(it) },
                                 onLoopPointsChanged = { a, b -> viewModel.setLoopPoints(a, b) }
                             )
@@ -216,16 +236,7 @@ fun PlayerScreen(
                     }
                 }
 
-                // 3. Precision Loop Tuning Controls
-                LoopControls(
-                    loopState = loopState,
-                    durationMs = playbackState.durationMs,
-                    onLoopPointsChanged = { a, b -> viewModel.setLoopPoints(a, b) },
-                    onNudgeA = { viewModel.nudgeLoopA(it) },
-                    onNudgeB = { viewModel.nudgeLoopB(it) },
-                    onSetAToCurrent = { viewModel.setPointAToCurrent() },
-                    onSetBToCurrent = { viewModel.setPointBToCurrent() }
-                )
+
 
                 // 4. Main Playback Controls
                 PlaybackControls(
@@ -234,12 +245,15 @@ fun PlayerScreen(
                     onTogglePlayPause = { viewModel.togglePlayPause() },
                     onRestartLoop = { viewModel.restartLoop() },
                     onToggleLoop = { viewModel.toggleLoop() },
-                    onSpeedChange = { viewModel.setPlaybackSpeed(it) }
+                    onSpeedChange = { viewModel.setPlaybackSpeed(it) },
+                    showSpeedControl = showSpeedControl
                 )
 
                 // 5. Musical Tools (Pitch, Metronome)
                 MusicalControls(
                     playbackState = playbackState,
+                    showPitchControl = showPitchControl,
+                    showMetronomeControl = showMetronomeControl,
                     onPitchChange = { viewModel.setPitch(it) },
                     onToggleMetronome = { viewModel.toggleMetronome() },
                     onBpmChange = { viewModel.setBpm(it) },
@@ -255,8 +269,14 @@ fun PlayerScreen(
 @Composable
 fun LiquidTopBar(
     onUpdateClick: () -> Unit,
-    onLaunchPiP: () -> Unit,
-    onLaunchFloatingWidget: () -> Unit
+    showSpeedControl: Boolean,
+    showPitchControl: Boolean,
+    showMetronomeControl: Boolean,
+    isBeatGridEnabled: Boolean,
+    onToggleSpeedControl: () -> Unit,
+    onTogglePitchControl: () -> Unit,
+    onToggleMetronomeControl: () -> Unit,
+    onToggleBeatGrid: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -271,25 +291,16 @@ fun LiquidTopBar(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             modifier = Modifier.clickable { onUpdateClick() }
         ) {
-            Box(
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(id = com.liquidloop.app.R.mipmap.ic_launcher),
+                contentDescription = "Check for updates",
                 modifier = Modifier
                     .size(32.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        Brush.linearGradient(listOf(LiquidCyan, LiquidPurpleLight))
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Waves,
-                    contentDescription = "Check for updates",
-                    tint = LiquidBackground,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
+            )
 
             Text(
-                text = "LiquidLoop",
+                text = "Liquid Loop",
                 color = Color.White,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.ExtraBold,
@@ -301,20 +312,6 @@ fun LiquidTopBar(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = LiquidSurfaceVariant,
-                border = BorderStroke(0.5.dp, LiquidCardBorder)
-            ) {
-                Text(
-                    text = "Gapless A-B",
-                    color = LiquidCyan,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                )
-            }
-
             var showSettingsMenu by remember { mutableStateOf(false) }
 
             Box {
@@ -336,17 +333,31 @@ fun LiquidTopBar(
                     modifier = Modifier.background(LiquidSurface)
                 ) {
                     androidx.compose.material3.DropdownMenuItem(
-                        text = { Text("Picture-in-Picture", color = LiquidTextPrimary) },
+                        text = { Text(if (showSpeedControl) "Hide Speed Control" else "Show Speed Control", color = LiquidTextPrimary) },
                         onClick = {
                             showSettingsMenu = false
-                            onLaunchPiP()
+                            onToggleSpeedControl()
                         }
                     )
                     androidx.compose.material3.DropdownMenuItem(
-                        text = { Text("Floating Widget", color = LiquidTextPrimary) },
+                        text = { Text(if (showPitchControl) "Hide Pitch Control" else "Show Pitch Control", color = LiquidTextPrimary) },
                         onClick = {
                             showSettingsMenu = false
-                            onLaunchFloatingWidget()
+                            onTogglePitchControl()
+                        }
+                    )
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(if (showMetronomeControl) "Hide Metronome Tool" else "Show Metronome Tool", color = LiquidTextPrimary) },
+                        onClick = {
+                            showSettingsMenu = false
+                            onToggleMetronomeControl()
+                        }
+                    )
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text(if (isBeatGridEnabled) "Hide Beat Grid" else "Show Beat Grid", color = LiquidTextPrimary) },
+                        onClick = {
+                            showSettingsMenu = false
+                            onToggleBeatGrid()
                         }
                     )
                 }
@@ -430,11 +441,15 @@ fun PiPPlayerContent(
 @Composable
 fun MusicalControls(
     playbackState: com.liquidloop.app.model.PlaybackState,
+    showPitchControl: Boolean,
+    showMetronomeControl: Boolean,
     onPitchChange: (Float) -> Unit,
     onToggleMetronome: () -> Unit,
     onBpmChange: (Float) -> Unit,
     onTimeSignatureChange: (Int) -> Unit
 ) {
+    if (!showPitchControl && !showMetronomeControl) return
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -446,150 +461,193 @@ fun MusicalControls(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Pitch / Transpose
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(Icons.Default.Tune, contentDescription = "Pitch", tint = LiquidPurpleLight)
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "Pitch (Transpose): ${if (playbackState.pitch >= 1f) "+" else ""}${String.format(java.util.Locale.US, "%.1f", (playbackState.pitch - 1f) * 12f)} st", color = LiquidTextPrimary, fontSize = 13.sp)
-                    Slider(
-                        value = playbackState.pitch,
-                        onValueChange = onPitchChange,
-                        valueRange = 0.5f..2.0f,
-                        steps = 23,
-                        colors = androidx.compose.material3.SliderDefaults.colors(
-                            thumbColor = LiquidPurpleLight,
-                            activeTrackColor = LiquidPurpleLight.copy(alpha = 0.7f)
-                        )
-                    )
-                }
-            }
-
-            // Metronome
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            if (showPitchControl) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Icon(Icons.Default.Timer, contentDescription = "Metronome", tint = LiquidCyan)
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(text = "Metronome Grid", color = LiquidTextPrimary, fontSize = 13.sp)
-                            
-                            var tapTimes by remember { mutableStateOf(listOf<Long>()) }
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = LiquidSurfaceVariant,
-                                border = BorderStroke(1.dp, LiquidCardBorder),
-                                modifier = Modifier.clickable {
-                                    val now = System.currentTimeMillis()
-                                    // Keep taps within the last 3 seconds
-                                    val recentTaps = tapTimes.filter { now - it < 3000 }.toMutableList()
-                                    recentTaps.add(now)
-                                    tapTimes = recentTaps
-                                    
-                                    if (recentTaps.size >= 2) {
-                                        val intervals = recentTaps.zipWithNext { a, b -> b - a }
-                                        val avgInterval = intervals.average()
-                                        if (avgInterval > 0) {
-                                            val newBpm = (60000.0 / avgInterval).toFloat().coerceIn(40f, 300f)
-                                            onBpmChange(newBpm)
+                    Icon(Icons.Default.Tune, contentDescription = "Pitch", tint = LiquidPurpleLight)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = "Pitch (Transpose): ${if (playbackState.pitch >= 1f) "+" else ""}${String.format(java.util.Locale.US, "%.1f", (playbackState.pitch - 1f) * 12f)} st", color = LiquidTextPrimary, fontSize = 13.sp)
+                        Slider(
+                            value = playbackState.pitch,
+                            onValueChange = onPitchChange,
+                            valueRange = 0.5f..2.0f,
+                            steps = 23,
+                            colors = androidx.compose.material3.SliderDefaults.colors(
+                                thumbColor = LiquidPurpleLight,
+                                activeTrackColor = LiquidPurpleLight.copy(alpha = 0.7f)
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Metronome
+            if (showMetronomeControl) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(Icons.Default.Timer, contentDescription = "Metronome", tint = LiquidCyan)
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(text = "Metronome Grid", color = LiquidTextPrimary, fontSize = 13.sp)
+                                
+                                var tapTimes by remember { mutableStateOf(listOf<Long>()) }
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = LiquidSurfaceVariant,
+                                    border = BorderStroke(1.dp, LiquidCardBorder),
+                                    modifier = Modifier.clickable {
+                                        val now = System.currentTimeMillis()
+                                        // Keep taps within the last 3 seconds
+                                        val recentTaps = tapTimes.filter { now - it < 3000 }.toMutableList()
+                                        recentTaps.add(now)
+                                        tapTimes = recentTaps
+                                        
+                                        if (recentTaps.size >= 2) {
+                                            val intervals = recentTaps.zipWithNext { a, b -> b - a }
+                                            val avgInterval = intervals.average()
+                                            if (avgInterval > 0) {
+                                                val newBpm = (60000.0 / avgInterval).toFloat().coerceIn(40f, 300f)
+                                                onBpmChange(newBpm)
+                                            }
                                         }
                                     }
+                                ) {
+                                    Text(
+                                        text = "TAP",
+                                        color = LiquidCyan,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
                                 }
-                            ) {
+                            }
+                            
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                var showBpmDialog by remember { mutableStateOf(false) }
+                                
+                                if (showBpmDialog) {
+                                    var bpmInput by remember { mutableStateOf(playbackState.bpm.toInt().toString()) }
+                                    androidx.compose.material3.AlertDialog(
+                                        onDismissRequest = { showBpmDialog = false },
+                                        containerColor = LiquidSurface,
+                                        title = { Text("Set BPM", color = LiquidCyan) },
+                                        text = {
+                                            androidx.compose.material3.OutlinedTextField(
+                                                value = bpmInput,
+                                                onValueChange = { bpmInput = it },
+                                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                                ),
+                                                textStyle = androidx.compose.ui.text.TextStyle(color = LiquidTextPrimary),
+                                                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                                    focusedBorderColor = LiquidCyan,
+                                                    unfocusedBorderColor = LiquidCardBorder
+                                                )
+                                            )
+                                        },
+                                        confirmButton = {
+                                            androidx.compose.material3.TextButton(onClick = {
+                                                bpmInput.toFloatOrNull()?.let {
+                                                    onBpmChange(it.coerceIn(40f, 300f))
+                                                }
+                                                showBpmDialog = false
+                                            }) {
+                                                Text("Set", color = LiquidCyan)
+                                            }
+                                        },
+                                        dismissButton = {
+                                            androidx.compose.material3.TextButton(onClick = { showBpmDialog = false }) {
+                                                Text("Cancel", color = LiquidTextSecondary)
+                                            }
+                                        }
+                                    )
+                                }
+                                
                                 Text(
-                                    text = "TAP",
+                                    text = "${playbackState.bpm.toInt()} BPM  |  ",
                                     color = LiquidCyan,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    modifier = Modifier.clickable { showBpmDialog = true }.padding(vertical = 4.dp)
+                                )
+
+                                var showTimeSigDialog by remember { mutableStateOf(false) }
+                                if (showTimeSigDialog) {
+                                    androidx.compose.material3.AlertDialog(
+                                        onDismissRequest = { showTimeSigDialog = false },
+                                        containerColor = LiquidSurface,
+                                        title = { Text("Time Signature", color = LiquidCyan) },
+                                        text = {
+                                            Column {
+                                                listOf(3, 4, 5, 6, 7).forEach { sig ->
+                                                    Text(
+                                                        text = "$sig/4",
+                                                        color = LiquidTextPrimary,
+                                                        fontSize = 18.sp,
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .clickable {
+                                                                onTimeSignatureChange(sig)
+                                                                showTimeSigDialog = false
+                                                            }
+                                                            .padding(12.dp)
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        confirmButton = {}
+                                    )
+                                }
+
+                                Text(
+                                    text = "${playbackState.timeSignature}/4",
+                                    color = LiquidCyan,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    modifier = Modifier.clickable { showTimeSigDialog = true }.padding(vertical = 4.dp)
                                 )
                             }
                         }
-                            var showBpmDialog by remember { mutableStateOf(false) }
-                            
-                            if (showBpmDialog) {
-                                var bpmInput by remember { mutableStateOf(playbackState.bpm.toInt().toString()) }
-                                androidx.compose.material3.AlertDialog(
-                                    onDismissRequest = { showBpmDialog = false },
-                                    containerColor = LiquidSurface,
-                                    title = { Text("Set BPM", color = LiquidCyan) },
-                                    text = {
-                                        androidx.compose.material3.OutlinedTextField(
-                                            value = bpmInput,
-                                            onValueChange = { bpmInput = it },
-                                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                                            ),
-                                            textStyle = androidx.compose.ui.text.TextStyle(color = LiquidTextPrimary),
-                                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                                                focusedBorderColor = LiquidCyan,
-                                                unfocusedBorderColor = LiquidCardBorder
-                                            )
-                                        )
-                                    },
-                                    confirmButton = {
-                                        androidx.compose.material3.TextButton(onClick = {
-                                            bpmInput.toFloatOrNull()?.let {
-                                                onBpmChange(it.coerceIn(40f, 300f))
-                                            }
-                                            showBpmDialog = false
-                                        }) {
-                                            Text("Set", color = LiquidCyan)
-                                        }
-                                    },
-                                    dismissButton = {
-                                        androidx.compose.material3.TextButton(onClick = { showBpmDialog = false }) {
-                                            Text("Cancel", color = LiquidTextSecondary)
-                                        }
-                                    }
-                                )
-                            }
-                            
-                            Text(
-                                text = "${playbackState.bpm.toInt()} BPM  |  ${playbackState.timeSignature}/4",
-                                color = LiquidCyan,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace,
-                                modifier = Modifier.clickable { showBpmDialog = true }.padding(4.dp)
+                    }
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        androidx.compose.material3.IconButton(
+                            onClick = { onBpmChange((playbackState.bpm - 1).coerceAtLeast(40f)) },
+                            modifier = Modifier.size(32.dp).clip(CircleShape).background(LiquidSurfaceVariant)
+                        ) {
+                            Text("-", color = LiquidCyan, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                        
+                        Switch(
+                            checked = playbackState.isMetronomeEnabled,
+                            onCheckedChange = { onToggleMetronome() },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = LiquidBackground,
+                                checkedTrackColor = LiquidCyan
                             )
-                    }
-                }
-                
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    androidx.compose.material3.IconButton(
-                        onClick = { onBpmChange((playbackState.bpm - 1).coerceAtLeast(40f)) },
-                        modifier = Modifier.size(32.dp).clip(CircleShape).background(LiquidSurfaceVariant)
-                    ) {
-                        Text("-", color = LiquidCyan, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
-                    
-                    Switch(
-                        checked = playbackState.isMetronomeEnabled,
-                        onCheckedChange = { onToggleMetronome() },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = LiquidBackground,
-                            checkedTrackColor = LiquidCyan
                         )
-                    )
-                    
-                    androidx.compose.material3.IconButton(
-                        onClick = { onBpmChange((playbackState.bpm + 1).coerceAtMost(300f)) },
-                        modifier = Modifier.size(32.dp).clip(CircleShape).background(LiquidSurfaceVariant)
-                    ) {
-                        Text("+", color = LiquidCyan, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        
+                        androidx.compose.material3.IconButton(
+                            onClick = { onBpmChange((playbackState.bpm + 1).coerceAtMost(300f)) },
+                            modifier = Modifier.size(32.dp).clip(CircleShape).background(LiquidSurfaceVariant)
+                        ) {
+                            Text("+", color = LiquidCyan, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -613,7 +671,15 @@ fun UpdateDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(text = "Version ${updateInfo.latestVersion} is available!", fontWeight = FontWeight.SemiBold)
-                Text(text = updateInfo.releaseNotes, fontSize = 14.sp, color = LiquidTextSecondary)
+                val cleanNotes = updateInfo.releaseNotes
+                    .replace(Regex("(?m)^#+\\s*"), "")
+                    .replace(Regex("\\*\\*(.*?)\\*\\*"), "$1")
+                    .replace(Regex("__(.*?)__"), "$1")
+                    .replace(Regex("\\*(.*?)\\*"), "$1")
+                    .replace(Regex("_(.*?)_"), "$1")
+                    .replace(Regex("`([^`]+)`"), "$1")
+                    .replace(Regex("\\[(.*?)\\]\\(.*?\\)"), "$1")
+                Text(text = cleanNotes, fontSize = 14.sp, color = LiquidTextSecondary)
             }
         },
         confirmButton = {

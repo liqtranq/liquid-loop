@@ -181,6 +181,12 @@ class LiquidAudioController(private val context: Context) {
                 val retriever = android.media.MediaMetadataRetriever()
                 retriever.setDataSource(context, track.uri)
                 val metaTitle = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE)
+                val artist = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: "Unknown Artist"
+                val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                val durationMs = durationStr?.toLongOrNull() ?: 0L
+                val bitrate = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toLongOrNull()
+                val mimeType = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_MIMETYPE)
+                val artwork = retriever.embeddedPicture
                 if (metaTitle != null) {
                     val metaMatch = bpmRegex.find(metaTitle)
                     if (metaMatch != null) {

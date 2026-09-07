@@ -10,8 +10,28 @@ data class TrackInfo(
     val mimeType: String? = null,
     val bitRate: Long? = null,
     val sampleRate: Int? = null,
-    val channelCount: Int? = null
+    val channelCount: Int? = null,
+    val artwork: ByteArray? = null
 ) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as TrackInfo
+
+        if (uri != other.uri) return false
+        if (title != other.title) return false
+        if (durationMs != other.durationMs) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = uri.hashCode()
+        result = 31 * result + title.hashCode()
+        result = 31 * result + durationMs.hashCode()
+        return result
+    }
     val formattedDuration: String
         get() = formatTimeMs(durationMs)
 

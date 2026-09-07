@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AudioFile
@@ -26,10 +27,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -78,12 +81,24 @@ fun TrackHeader(
                         .background(LiquidSurfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.GraphicEq,
-                        contentDescription = null,
-                        tint = LiquidCyan,
-                        modifier = Modifier.size(26.dp)
-                    )
+                    val artwork = trackInfo.artwork
+                    if (artwork != null && artwork.isNotEmpty()) {
+                        val bitmap: androidx.compose.ui.graphics.ImageBitmap? = remember(artwork) {
+                            android.graphics.BitmapFactory.decodeByteArray(artwork, 0, artwork.size)?.asImageBitmap()
+                        }
+                        if (bitmap != null) {
+                            androidx.compose.foundation.Image(
+                                bitmap = bitmap,
+                                contentDescription = "Album Art",
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Icon(imageVector = Icons.Default.GraphicEq, contentDescription = null, tint = LiquidCyan, modifier = Modifier.size(26.dp))
+                        }
+                    } else {
+                        Icon(imageVector = Icons.Default.GraphicEq, contentDescription = null, tint = LiquidCyan, modifier = Modifier.size(26.dp))
+                    }
                 }
 
                 Column(

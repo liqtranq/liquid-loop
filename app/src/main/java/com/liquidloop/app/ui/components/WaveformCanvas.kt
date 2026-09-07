@@ -57,6 +57,7 @@ fun WaveformCanvas(
     waveform: FloatArray,
     playbackState: PlaybackState,
     loopState: LoopState,
+    isBeatGridEnabled: Boolean,
     onSeek: (Long) -> Unit,
     onLoopPointsChanged: (Long, Long) -> Unit,
     modifier: Modifier = Modifier
@@ -152,25 +153,27 @@ fun WaveformCanvas(
             }
 
             // 2.5 Draw Beat Grid
-            val bpm = playbackState.bpm
-            val ts = playbackState.timeSignature
-            if (bpm > 0) {
-                val beatIntervalMs = (60000f / bpm)
-                var currentBeatMs = 0f
-                var beatCount = 0
-                while (currentBeatMs < durationMs) {
-                    val x = (currentBeatMs / durationMs) * virtualWidth
-                    val isDownbeat = (beatCount % ts == 0)
-                    
-                    drawLine(
-                        color = if (isDownbeat) LiquidPurpleLight.copy(alpha = 0.3f) else LiquidTextMuted.copy(alpha = 0.1f),
-                        start = Offset(x, 0f),
-                        end = Offset(x, canvasHeight),
-                        strokeWidth = if (isDownbeat) 2f else 1f
-                    )
-                    
-                    currentBeatMs += beatIntervalMs
-                    beatCount++
+            if (isBeatGridEnabled) {
+                val bpm = playbackState.bpm
+                val ts = playbackState.timeSignature
+                if (bpm > 0) {
+                    val beatIntervalMs = (60000f / bpm)
+                    var currentBeatMs = 0f
+                    var beatCount = 0
+                    while (currentBeatMs < durationMs) {
+                        val x = (currentBeatMs / durationMs) * virtualWidth
+                        val isDownbeat = (beatCount % ts == 0)
+                        
+                        drawLine(
+                            color = if (isDownbeat) LiquidPurpleLight.copy(alpha = 0.3f) else LiquidTextMuted.copy(alpha = 0.1f),
+                            start = Offset(x, 0f),
+                            end = Offset(x, canvasHeight),
+                            strokeWidth = if (isDownbeat) 2f else 1f
+                        )
+                        
+                        currentBeatMs += beatIntervalMs
+                        beatCount++
+                    }
                 }
             }
 
