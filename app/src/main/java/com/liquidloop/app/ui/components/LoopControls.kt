@@ -94,8 +94,10 @@ fun LoopControls(
         MarkerTuningPanel(
             title = "Marker A (Loop Start)",
             timestamp = loopState.formattedStart,
+            markerValueMs = loopState.startMs,
+            durationMs = durationMs,
             markerColor = MarkerAColor,
-            onNudge = onNudgeA,
+            onValueChange = { onLoopPointsChanged(it, loopState.endMs) },
             onSetCurrent = onSetAToCurrent
         )
 
@@ -103,8 +105,10 @@ fun LoopControls(
         MarkerTuningPanel(
             title = "Marker B (Loop End)",
             timestamp = loopState.formattedEnd,
+            markerValueMs = loopState.endMs,
+            durationMs = durationMs,
             markerColor = MarkerBColor,
-            onNudge = onNudgeB,
+            onValueChange = { onLoopPointsChanged(loopState.startMs, it) },
             onSetCurrent = onSetBToCurrent
         )
     }
@@ -179,8 +183,10 @@ fun LoopStatsBar(loopState: LoopState) {
 fun MarkerTuningPanel(
     title: String,
     timestamp: String,
+    markerValueMs: Long,
+    durationMs: Long,
     markerColor: Color,
-    onNudge: (Long) -> Unit,
+    onValueChange: (Long) -> Unit,
     onSetCurrent: () -> Unit
 ) {
     Card(
@@ -226,16 +232,23 @@ fun MarkerTuningPanel(
                 )
             }
 
-            // Nudge Button Row
+            // Fine Tuning Slider Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                NudgeChip(label = "-100ms", onClick = { onNudge(-100L) }, modifier = Modifier.weight(1f))
-                NudgeChip(label = "-50ms", onClick = { onNudge(-50L) }, modifier = Modifier.weight(1f))
-                NudgeChip(label = "+50ms", onClick = { onNudge(50L) }, modifier = Modifier.weight(1f))
-                NudgeChip(label = "+100ms", onClick = { onNudge(100L) }, modifier = Modifier.weight(1f))
+                androidx.compose.material3.Slider(
+                    value = markerValueMs.toFloat(),
+                    onValueChange = { onValueChange(it.toLong()) },
+                    valueRange = 0f..(if (durationMs > 0) durationMs.toFloat() else 1000f),
+                    modifier = Modifier.weight(1f),
+                    colors = androidx.compose.material3.SliderDefaults.colors(
+                        thumbColor = markerColor,
+                        activeTrackColor = markerColor.copy(alpha = 0.7f),
+                        inactiveTrackColor = LiquidSurfaceVariant
+                    )
+                )
 
                 // Set to Playhead Button
                 OutlinedButton(

@@ -166,9 +166,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        // Auto-enter PiP if playing audio
-        if (viewModel.playbackState.value.isPlaying && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            enterPiPMode()
-        }
+        // PiP disabled by default as requested
     }
 }

@@ -70,9 +70,9 @@ class LiquidAudioController(private val context: Context) {
                     val now = System.currentTimeMillis()
                     if (now >= nextTickTime) {
                         if (tickCount % state.timeSignature == 0) {
-                            toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 40)
+                            toneGenerator.startTone(ToneGenerator.TONE_PROP_PROMPT, 30)
                         } else {
-                            toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP2, 40)
+                            toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP, 30)
                         }
                         
                         val bpm = state.bpm.coerceAtLeast(40f)
@@ -165,6 +165,37 @@ class LiquidAudioController(private val context: Context) {
     fun loadTrack(track: TrackInfo) {
         val controller = mediaController ?: return
         _currentTrack.value = track
+
+        var detectedBpm: Float? = null
+        val bpmRegex = Regex("(?i)(\\d{2,3})\\s*bpm")
+        
+        // 1. Try to extract from title/filename
+        val match = bpmRegex.find(track.title)
+        if (match != null) {
+            detectedBpm = match.groupValues[1].toFloatOrNull()
+        }
+
+        // 2. Try MediaMetadataRetriever
+        if (detectedBpm == null) {
+            try {
+                val retriever = android.media.MediaMetadataRetriever()
+                retriever.setDataSource(context, track.uri)
+                val metaTitle = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE)
+                if (metaTitle != null) {
+                    val metaMatch = bpmRegex.find(metaTitle)
+                    if (metaMatch != null) {
+                        detectedBpm = metaMatch.groupValues[1].toFloatOrNull()
+                    }
+                }
+                retriever.release()
+            } catch (e: Exception) {
+                // Ignore metadata extraction errors
+            }
+        }
+
+        if (detectedBpm != null) {
+            _playbackState.update { it.copy(bpm = detectedBpm) }
+        }
 
         val mediaMetadata = MediaMetadata.Builder()
             .setTitle(track.title)

@@ -61,8 +61,6 @@ fun PlaybackControls(
     onRestartLoop: () -> Unit,
     onToggleLoop: () -> Unit,
     onSpeedChange: (Float) -> Unit,
-    onLaunchPiP: () -> Unit,
-    onLaunchFloatingWidget: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -82,22 +80,6 @@ fun PlaybackControls(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Picture-in-Picture / Overlay trigger
-            IconButton(
-                onClick = onLaunchFloatingWidget,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(LiquidSurfaceVariant)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Layers,
-                    contentDescription = "Floating Overlay Widget",
-                    tint = LiquidCyan,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
             // Restart from Loop Point A
             IconButton(
                 onClick = onRestartLoop,
@@ -156,22 +138,6 @@ fun PlaybackControls(
                     contentDescription = "Toggle Loop Mode",
                     tint = loopActiveColor,
                     modifier = Modifier.size(28.dp)
-                )
-            }
-
-            // Native PiP button
-            IconButton(
-                onClick = onLaunchPiP,
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(LiquidSurfaceVariant)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PictureInPictureAlt,
-                    contentDescription = "Picture in Picture",
-                    tint = LiquidTextSecondary,
-                    modifier = Modifier.size(22.dp)
                 )
             }
         }

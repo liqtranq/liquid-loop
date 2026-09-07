@@ -40,6 +40,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _updateInfo = MutableStateFlow<com.liquidloop.app.core.network.UpdateChecker.UpdateInfo?>(null)
     val updateInfo: StateFlow<com.liquidloop.app.core.network.UpdateChecker.UpdateInfo?> = _updateInfo.asStateFlow()
 
+    private val _manualUpdateInfo = MutableStateFlow<com.liquidloop.app.core.network.UpdateChecker.UpdateInfo?>(null)
+    val manualUpdateInfo: StateFlow<com.liquidloop.app.core.network.UpdateChecker.UpdateInfo?> = _manualUpdateInfo.asStateFlow()
+
     init {
         checkForUpdates()
     }
@@ -53,8 +56,25 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun checkUpdatesManually() {
+        viewModelScope.launch {
+            val info = com.liquidloop.app.core.network.UpdateChecker.checkForUpdates(com.liquidloop.app.BuildConfig.VERSION_NAME)
+            if (info != null) {
+                if (info.isUpdateAvailable) {
+                    _updateInfo.value = info
+                } else {
+                    _manualUpdateInfo.value = info
+                }
+            }
+        }
+    }
+
     fun dismissUpdate() {
         _updateInfo.value = null
+    }
+
+    fun dismissManualUpdate() {
+        _manualUpdateInfo.value = null
     }
 
     fun onAudioSelected(uri: Uri) {

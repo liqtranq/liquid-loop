@@ -91,11 +91,36 @@ fun PlayerScreen(
     val isLoadingWaveform by viewModel.isLoadingWaveform.collectAsState()
     val isInPiP by viewModel.isInPictureInPicture.collectAsState()
     val updateInfo by viewModel.updateInfo.collectAsState()
+    val manualUpdateInfo by viewModel.manualUpdateInfo.collectAsState()
 
     updateInfo?.let { info ->
         UpdateDialog(
             updateInfo = info,
             onDismiss = { viewModel.dismissUpdate() }
+        )
+    }
+
+    manualUpdateInfo?.let { info ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { viewModel.dismissManualUpdate() },
+            containerColor = LiquidSurface,
+            titleContentColor = LiquidCyan,
+            textContentColor = LiquidTextPrimary,
+            title = {
+                Text(text = "App is up to date!", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "Version ${info.latestVersion}", fontWeight = FontWeight.SemiBold)
+                    Text(text = "What's new:", color = LiquidTextSecondary, fontSize = 12.sp)
+                    Text(text = info.releaseNotes, fontSize = 14.sp)
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { viewModel.dismissManualUpdate() }) {
+                    Text("Close", color = LiquidCyan)
+                }
+            }
         )
     }
 
@@ -110,17 +135,21 @@ fun PlayerScreen(
             onRestartLoop = { viewModel.restartLoop() }
         )
     } else {
-        // Fullscreen Liquid Player UI
+                // Fullscreen Liquid Player UI
         Scaffold(
             containerColor = LiquidBackground,
             topBar = {
-                LiquidTopBar()
+                LiquidTopBar(
+                    onUpdateClick = { viewModel.checkUpdatesManually() },
+                    onLaunchPiP = onEnterPiP,
+                    onLaunchFloatingWidget = onLaunchFloatingWidget
+                )
             }
         ) { innerPadding ->
             Column(
                 modifier = modifier
                     .fillMaxSize()
-                    .systemBarsPadding()
+                    .padding(innerPadding)
                     .padding(horizontal = 16.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -205,9 +234,7 @@ fun PlayerScreen(
                     onTogglePlayPause = { viewModel.togglePlayPause() },
                     onRestartLoop = { viewModel.restartLoop() },
                     onToggleLoop = { viewModel.toggleLoop() },
-                    onSpeedChange = { viewModel.setPlaybackSpeed(it) },
-                    onLaunchPiP = onEnterPiP,
-                    onLaunchFloatingWidget = onLaunchFloatingWidget
+                    onSpeedChange = { viewModel.setPlaybackSpeed(it) }
                 )
 
                 // 5. Musical Tools (Pitch, Metronome)
@@ -226,7 +253,11 @@ fun PlayerScreen(
 }
 
 @Composable
-fun LiquidTopBar() {
+fun LiquidTopBar(
+    onUpdateClick: () -> Unit,
+    onLaunchPiP: () -> Unit,
+    onLaunchFloatingWidget: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -237,7 +268,8 @@ fun LiquidTopBar() {
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.clickable { onUpdateClick() }
         ) {
             Box(
                 modifier = Modifier
@@ -250,7 +282,7 @@ fun LiquidTopBar() {
             ) {
                 Icon(
                     imageVector = Icons.Default.Waves,
-                    contentDescription = null,
+                    contentDescription = "Check for updates",
                     tint = LiquidBackground,
                     modifier = Modifier.size(20.dp)
                 )
@@ -265,18 +297,60 @@ fun LiquidTopBar() {
             )
         }
 
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = LiquidSurfaceVariant,
-            border = BorderStroke(0.5.dp, LiquidCardBorder)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Gapless A-B Looper",
-                color = LiquidCyan,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-            )
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = LiquidSurfaceVariant,
+                border = BorderStroke(0.5.dp, LiquidCardBorder)
+            ) {
+                Text(
+                    text = "Gapless A-B",
+                    color = LiquidCyan,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                )
+            }
+
+            var showSettingsMenu by remember { mutableStateOf(false) }
+
+            Box {
+                IconButton(
+                    onClick = { showSettingsMenu = true },
+                    modifier = Modifier.size(32.dp).clip(CircleShape).background(LiquidSurfaceVariant)
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Tune,
+                        contentDescription = "Settings",
+                        tint = LiquidCyan,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                androidx.compose.material3.DropdownMenu(
+                    expanded = showSettingsMenu,
+                    onDismissRequest = { showSettingsMenu = false },
+                    modifier = Modifier.background(LiquidSurface)
+                ) {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text("Picture-in-Picture", color = LiquidTextPrimary) },
+                        onClick = {
+                            showSettingsMenu = false
+                            onLaunchPiP()
+                        }
+                    )
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { Text("Floating Widget", color = LiquidTextPrimary) },
+                        onClick = {
+                            showSettingsMenu = false
+                            onLaunchFloatingWidget()
+                        }
+                    )
+                }
+            }
         }
     }
 }
@@ -441,7 +515,53 @@ fun MusicalControls(
                                 )
                             }
                         }
-                        Text(text = "${playbackState.bpm.toInt()} BPM  |  ${playbackState.timeSignature}/4", color = LiquidCyan, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                            var showBpmDialog by remember { mutableStateOf(false) }
+                            
+                            if (showBpmDialog) {
+                                var bpmInput by remember { mutableStateOf(playbackState.bpm.toInt().toString()) }
+                                androidx.compose.material3.AlertDialog(
+                                    onDismissRequest = { showBpmDialog = false },
+                                    containerColor = LiquidSurface,
+                                    title = { Text("Set BPM", color = LiquidCyan) },
+                                    text = {
+                                        androidx.compose.material3.OutlinedTextField(
+                                            value = bpmInput,
+                                            onValueChange = { bpmInput = it },
+                                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                                keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                                            ),
+                                            textStyle = androidx.compose.ui.text.TextStyle(color = LiquidTextPrimary),
+                                            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = LiquidCyan,
+                                                unfocusedBorderColor = LiquidCardBorder
+                                            )
+                                        )
+                                    },
+                                    confirmButton = {
+                                        androidx.compose.material3.TextButton(onClick = {
+                                            bpmInput.toFloatOrNull()?.let {
+                                                onBpmChange(it.coerceIn(40f, 300f))
+                                            }
+                                            showBpmDialog = false
+                                        }) {
+                                            Text("Set", color = LiquidCyan)
+                                        }
+                                    },
+                                    dismissButton = {
+                                        androidx.compose.material3.TextButton(onClick = { showBpmDialog = false }) {
+                                            Text("Cancel", color = LiquidTextSecondary)
+                                        }
+                                    }
+                                )
+                            }
+                            
+                            Text(
+                                text = "${playbackState.bpm.toInt()} BPM  |  ${playbackState.timeSignature}/4",
+                                color = LiquidCyan,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.clickable { showBpmDialog = true }.padding(4.dp)
+                            )
                     }
                 }
                 
