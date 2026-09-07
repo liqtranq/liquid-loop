@@ -100,13 +100,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val trackInfo = extractMetadata(getApplication(), uri)
             audioController.loadTrack(trackInfo)
 
-            // Extract Waveform in background
-            _isLoadingWaveform.value = true
+            // Extract Waveform
             try {
-                val wf = WaveformExtractor.extractWaveform(getApplication(), uri)
-                _waveform.value = wf
+                _isLoadingWaveform.value = true
+                val (waveform, detectedBpm) = WaveformExtractor.extractWaveformAndBpm(getApplication(), uri)
+                _waveform.value = waveform
+                
+                // Set the detected BPM to the audioController if not already set by user
+                if (detectedBpm != null) {
+                    audioController.setBpm(detectedBpm)
+                }
             } catch (e: Exception) {
-                Log.e("PlayerViewModel", "Error extracting waveform", e)
+                Log.e("PlayerViewModel", "Error loading waveform", e)
             } finally {
                 _isLoadingWaveform.value = false
             }

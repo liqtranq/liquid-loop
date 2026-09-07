@@ -21,25 +21,26 @@ object WaveformExtractor {
     private const val DEFAULT_BARS_COUNT = 256
     private const val TIMEOUT_US = 5000L
 
-    // In-memory cache for extracted waveforms: URI string -> FloatArray
-    private val memoryCache = LruCache<String, FloatArray>(20)
+    // In-memory cache for extracted waveforms and BPM: URI string -> Pair<FloatArray, Float?>
+    private val memoryCache = LruCache<String, Pair<FloatArray, Float?>>(20)
 
-    suspend fun extractWaveform(
+    suspend fun extractWaveformAndBpm(
         context: Context,
         uri: Uri,
         targetBars: Int = DEFAULT_BARS_COUNT
-    ): FloatArray = withContext(Dispatchers.IO) {
+    ): Pair<FloatArray, Float?> = withContext(Dispatchers.IO) {
         val cacheKey = uri.toString()
         memoryCache.get(cacheKey)?.let {
             return@withContext it
         }
 
         try {
-            val amplitudes = decodeAmplitudes(context, uri, targetBars)
+            val (amplitudes, bpm) = decodeAmplitudesAndBpm(context, uri, targetBars)
             if (amplitudes != null && amplitudes.isNotEmpty()) {
                 val normalized = normalizeAmplitudes(amplitudes)
-                memoryCache.put(cacheKey, normalized)
-                return@withContext normalized
+                val result = Pair(normalized, bpm)
+                memoryCache.put(cacheKey, result)
+                return@withContext result
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error decoding audio for waveform from $uri", e)
@@ -47,15 +48,16 @@ object WaveformExtractor {
 
         // Fallback: generate smooth aesthetic procedural waveform if format unsupported by decoder
         val fallback = generateFallbackWaveform(targetBars)
-        memoryCache.put(cacheKey, fallback)
-        fallback
+        val result = Pair(fallback, null)
+        memoryCache.put(cacheKey, result)
+        result
     }
 
-    private fun decodeAmplitudes(
+    private fun decodeAmplitudesAndBpm(
         context: Context,
         uri: Uri,
         targetBars: Int
-    ): FloatArray? {
+    ): Pair<FloatArray?, Float?> {
         val extractor = MediaExtractor()
         var codec: MediaCodec? = null
 
@@ -64,11 +66,11 @@ object WaveformExtractor {
             val trackIndex = selectAudioTrack(extractor)
             if (trackIndex < 0) {
                 Log.w(TAG, "No audio track found in media source")
-                return null
+                return Pair(null, null)
             }
             extractor.selectTrack(trackIndex)
             val format = extractor.getTrackFormat(trackIndex)
-            val mime = format.getString(MediaFormat.KEY_MIME) ?: return null
+            val mime = format.getString(MediaFormat.KEY_MIME) ?: return Pair(null, null)
 
             val durationUs = if (format.containsKey(MediaFormat.KEY_DURATION)) {
                 format.getLong(MediaFormat.KEY_DURATION)
@@ -144,11 +146,17 @@ object WaveformExtractor {
             }
 
             if (rawAmplitudes.isEmpty()) {
-                return null
+                return Pair(null, null)
             }
 
+            // Estimate BPM before downsampling
+            // 512 samples at common sample rates: 44.1kHz -> 11.6ms, 48kHz -> 10.6ms
+            // We use 11.6f as a good average approximation for the window size
+            var bpm = BpmDetector.estimateBpm(rawAmplitudes.toFloatArray(), 11.6f)
+
             // Downsample or interpolate rawAmplitudes to exact targetBars count
-            return resampleAmplitudes(rawAmplitudes, targetBars)
+            val resampled = resampleAmplitudes(rawAmplitudes, targetBars)
+            return Pair(resampled, bpm)
 
         } finally {
             try {

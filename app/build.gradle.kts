@@ -11,8 +11,8 @@ android {
         applicationId = "com.liquidloop.app"
         minSdk = 26
         targetSdk = 37
-        versionCode = 6
-        versionName = "1.2.0"
+        versionCode = 7
+        versionName = "1.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -64,9 +64,10 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
 
     // AndroidX Media3
-    implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.media3.session)
-    implementation(libs.androidx.media3.ui)
+    implementation("androidx.media3:media3-exoplayer:1.2.1")
+    implementation("androidx.media3:media3-ui:1.2.1")
+    implementation("androidx.media3:media3-session:1.2.1")
+    
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)

@@ -158,7 +158,7 @@ class PlaybackService : MediaSessionService() {
 
                 return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                     .setAvailableSessionCommands(sessionCommands)
-                    .setCustomLayout(listOf(restartButton, toggleLoopButton))
+                    .setCustomLayout(com.google.common.collect.ImmutableList.of(restartButton, toggleLoopButton))
                     .build()
             }
 
@@ -197,7 +197,7 @@ class PlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivityPendingIntent)
             .setCallback(callback)
-            .setCustomLayout(listOf(restartButton, toggleLoopButton))
+            .setCustomLayout(com.google.common.collect.ImmutableList.of(restartButton, toggleLoopButton))
             .build()
     }
 

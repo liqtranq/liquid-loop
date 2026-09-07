@@ -167,12 +167,20 @@ fun WaveformCanvas(
                         else -> 1f
                     }
                     val gridIntervalMs = beatIntervalMs * multiplier
-                    var currentGridMs = 0f
-                    var lineCount = 0
-                    while (currentGridMs < durationMs) {
+                    
+                    val maxLines = (durationMs / gridIntervalMs).toInt() + 1
+                    for (i in 0 until maxLines) {
+                        val currentGridMs = i * gridIntervalMs
                         val x = (currentGridMs / durationMs) * virtualWidth
-                        // Emphasize downbeats or bar lines if it matches
-                        val isBarLine = (currentGridMs % (beatIntervalMs * ts) < 5f)
+                        
+                        // It's a bar line if the time matches exactly a bar boundary.
+                        // A bar is (beatIntervalMs * ts) long.
+                        val barDurationMs = beatIntervalMs * ts
+                        // We can check if `currentGridMs` is a multiple of `barDurationMs` 
+                        // by using the index if `multiplier` is clean, but multiplier can be 0.5 or 0.25.
+                        // So: barIndex = currentGridMs / barDurationMs.
+                        val barIndex = currentGridMs / barDurationMs
+                        val isBarLine = abs(barIndex - Math.round(barIndex)) < 0.05f
                         
                         drawLine(
                             color = if (isBarLine) LiquidPurpleLight.copy(alpha = 0.4f) else LiquidTextMuted.copy(alpha = 0.15f),
@@ -180,9 +188,6 @@ fun WaveformCanvas(
                             end = Offset(x, canvasHeight),
                             strokeWidth = if (isBarLine) 2f else 1f
                         )
-                        
-                        currentGridMs += gridIntervalMs
-                        lineCount++
                     }
                 }
             }

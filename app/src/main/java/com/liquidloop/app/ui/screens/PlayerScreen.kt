@@ -274,6 +274,15 @@ fun PlayerScreen(
                     onTimeSignatureChange = { viewModel.setTimeSignature(it) }
                 )
 
+                if (isBeatGridEnabled) {
+                    GridControls(
+                        playbackState = playbackState,
+                        onTimeSignatureChange = { viewModel.setTimeSignature(it) },
+                        onGridResolutionChange = { viewModel.setGridResolutionIndex(it) },
+                        onToggleSnap = { viewModel.toggleSnap() }
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
             }
         }
