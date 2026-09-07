@@ -37,6 +37,26 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _isInPictureInPicture = MutableStateFlow(false)
     val isInPictureInPicture: StateFlow<Boolean> = _isInPictureInPicture.asStateFlow()
 
+    private val _updateInfo = MutableStateFlow<com.liquidloop.app.core.network.UpdateChecker.UpdateInfo?>(null)
+    val updateInfo: StateFlow<com.liquidloop.app.core.network.UpdateChecker.UpdateInfo?> = _updateInfo.asStateFlow()
+
+    init {
+        checkForUpdates()
+    }
+
+    private fun checkForUpdates() {
+        viewModelScope.launch {
+            val info = com.liquidloop.app.core.network.UpdateChecker.checkForUpdates(com.liquidloop.app.BuildConfig.VERSION_NAME)
+            if (info != null && info.isUpdateAvailable) {
+                _updateInfo.value = info
+            }
+        }
+    }
+
+    fun dismissUpdate() {
+        _updateInfo.value = null
+    }
+
     fun onAudioSelected(uri: Uri) {
         viewModelScope.launch {
             val trackInfo = extractMetadata(getApplication(), uri)

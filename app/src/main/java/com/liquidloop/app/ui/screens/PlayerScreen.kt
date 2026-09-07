@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,6 +46,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,6 +90,14 @@ fun PlayerScreen(
     val waveform by viewModel.waveform.collectAsState()
     val isLoadingWaveform by viewModel.isLoadingWaveform.collectAsState()
     val isInPiP by viewModel.isInPictureInPicture.collectAsState()
+    val updateInfo by viewModel.updateInfo.collectAsState()
+
+    updateInfo?.let { info ->
+        UpdateDialog(
+            updateInfo = info,
+            onDismiss = { viewModel.dismissUpdate() }
+        )
+    }
 
     if (isInPiP) {
         // Compact Picture-in-Picture UI
@@ -392,7 +404,43 @@ fun MusicalControls(
                 ) {
                     Icon(Icons.Default.Timer, contentDescription = "Metronome", tint = LiquidCyan)
                     Column {
-                        Text(text = "Metronome Grid", color = LiquidTextPrimary, fontSize = 13.sp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(text = "Metronome Grid", color = LiquidTextPrimary, fontSize = 13.sp)
+                            
+                            var tapTimes by remember { mutableStateOf(listOf<Long>()) }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = LiquidSurfaceVariant,
+                                border = BorderStroke(1.dp, LiquidCardBorder),
+                                modifier = Modifier.clickable {
+                                    val now = System.currentTimeMillis()
+                                    // Keep taps within the last 3 seconds
+                                    val recentTaps = tapTimes.filter { now - it < 3000 }.toMutableList()
+                                    recentTaps.add(now)
+                                    tapTimes = recentTaps
+                                    
+                                    if (recentTaps.size >= 2) {
+                                        val intervals = recentTaps.zipWithNext { a, b -> b - a }
+                                        val avgInterval = intervals.average()
+                                        if (avgInterval > 0) {
+                                            val newBpm = (60000.0 / avgInterval).toFloat().coerceIn(40f, 300f)
+                                            onBpmChange(newBpm)
+                                        }
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    text = "TAP",
+                                    color = LiquidCyan,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                         Text(text = "${playbackState.bpm.toInt()} BPM  |  ${playbackState.timeSignature}/4", color = LiquidCyan, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
                     }
                 }
@@ -427,4 +475,44 @@ fun MusicalControls(
             }
         }
     }
+}
+
+@Composable
+fun UpdateDialog(
+    updateInfo: com.liquidloop.app.core.network.UpdateChecker.UpdateInfo,
+    onDismiss: () -> Unit
+) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = LiquidSurface,
+        titleContentColor = LiquidCyan,
+        textContentColor = LiquidTextPrimary,
+        title = {
+            Text(text = "Update Available", fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(text = "Version ${updateInfo.latestVersion} is available!", fontWeight = FontWeight.SemiBold)
+                Text(text = updateInfo.releaseNotes, fontSize = 14.sp, color = LiquidTextSecondary)
+            }
+        },
+        confirmButton = {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            androidx.compose.material3.Button(
+                onClick = {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(updateInfo.downloadUrl))
+                    context.startActivity(intent)
+                    onDismiss()
+                },
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = LiquidCyan)
+            ) {
+                Text("Download", color = LiquidBackground)
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text("Later", color = LiquidTextSecondary)
+            }
+        }
+    )
 }
