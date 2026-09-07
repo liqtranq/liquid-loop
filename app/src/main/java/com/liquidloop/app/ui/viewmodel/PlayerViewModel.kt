@@ -53,7 +53,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _showMetronomeControl = MutableStateFlow(false)
     val showMetronomeControl = _showMetronomeControl.asStateFlow()
 
-    private val _isBeatGridEnabled = MutableStateFlow(true)
+    private val _isBeatGridEnabled = MutableStateFlow(false)
     val isBeatGridEnabled = _isBeatGridEnabled.asStateFlow()
 
     fun toggleSpeedControl() { _showSpeedControl.value = !_showSpeedControl.value }

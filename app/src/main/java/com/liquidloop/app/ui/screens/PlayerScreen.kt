@@ -59,6 +59,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.input.pointer.pointerInput
 import com.liquidloop.app.model.TrackInfo
 import com.liquidloop.app.ui.components.LoopControls
 import com.liquidloop.app.ui.components.PlaybackControls
@@ -237,8 +241,16 @@ fun PlayerScreen(
                 }
 
 
-
-                // 4. Main Playback Controls
+                // 3. Loop Controls (General A-B Slider & Stats)
+                com.liquidloop.app.ui.components.LoopControls(
+                    loopState = loopState,
+                    durationMs = playbackState.durationMs,
+                    onLoopPointsChanged = { a, b -> viewModel.setLoopPoints(a, b) },
+                    onNudgeA = { viewModel.nudgeLoopA(it) },
+                    onNudgeB = { viewModel.nudgeLoopB(it) },
+                    onSetAToCurrent = { viewModel.setPointAToCurrent() },
+                    onSetBToCurrent = { viewModel.setPointBToCurrent() }
+                )
                 PlaybackControls(
                     playbackState = playbackState,
                     loopState = loopState,
@@ -314,11 +326,50 @@ fun LiquidTopBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             var showSettingsMenu by remember { mutableStateOf(false) }
+            var hoverIndex by remember { mutableStateOf(-1) }
 
-            Box {
-                IconButton(
-                    onClick = { showSettingsMenu = true },
-                    modifier = Modifier.size(32.dp).clip(CircleShape).background(LiquidSurfaceVariant)
+            Box(
+                modifier = Modifier.pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        showSettingsMenu = true
+                        hoverIndex = -1
+                        
+                        do {
+                            val event = awaitPointerEvent()
+                            val ptr = event.changes.firstOrNull { it.id == down.id }
+                            if (ptr != null) {
+                                val y = ptr.position.y
+                                val topPadding = 40.dp.toPx()
+                                val itemHeight = 48.dp.toPx()
+                                
+                                if (y > topPadding) {
+                                    val newHover = ((y - topPadding) / itemHeight).toInt()
+                                    hoverIndex = newHover.coerceIn(0, 3)
+                                } else {
+                                    hoverIndex = -1
+                                }
+                            }
+                        } while (event.changes.any { it.pressed })
+                        
+                        // Pointer released
+                        if (showSettingsMenu) {
+                            when (hoverIndex) {
+                                0 -> onToggleSpeedControl()
+                                1 -> onTogglePitchControl()
+                                2 -> onToggleMetronomeControl()
+                                3 -> onToggleBeatGrid()
+                            }
+                            showSettingsMenu = false
+                            hoverIndex = -1
+                        }
+                    }
+                }
+            ) {
+                // Settings Icon
+                Box(
+                    modifier = Modifier.size(32.dp).clip(CircleShape).background(if (showSettingsMenu) LiquidSurface else LiquidSurfaceVariant),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = androidx.compose.material.icons.Icons.Default.Tune,
@@ -328,39 +379,40 @@ fun LiquidTopBar(
                     )
                 }
 
-                androidx.compose.material3.DropdownMenu(
-                    expanded = showSettingsMenu,
-                    onDismissRequest = { showSettingsMenu = false },
-                    modifier = Modifier.background(LiquidSurface)
-                ) {
-                    androidx.compose.material3.DropdownMenuItem(
-                        text = { Text(if (showSpeedControl) "Hide Speed Control" else "Show Speed Control", color = LiquidTextPrimary) },
-                        onClick = {
-                            showSettingsMenu = false
-                            onToggleSpeedControl()
+                if (showSettingsMenu) {
+                    Popup(
+                        alignment = Alignment.TopEnd,
+                        offset = androidx.compose.ui.unit.IntOffset(0, 100)
+                    ) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = LiquidSurface),
+                            border = BorderStroke(1.dp, LiquidCardBorder),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.width(200.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                                val items = listOf(
+                                    if (showSpeedControl) "Hide Speed Control" else "Show Speed Control",
+                                    if (showPitchControl) "Hide Pitch Control" else "Show Pitch Control",
+                                    if (showMetronomeControl) "Hide Metronome Tool" else "Show Metronome Tool",
+                                    if (isBeatGridEnabled) "Hide Beat Grid" else "Show Beat Grid"
+                                )
+                                items.forEachIndexed { index, text ->
+                                    val isHovered = index == hoverIndex
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp)
+                                            .background(if (isHovered) LiquidSurfaceVariant else Color.Transparent)
+                                            .padding(horizontal = 16.dp),
+                                        contentAlignment = Alignment.CenterStart
+                                    ) {
+                                        Text(text = text, color = if (isHovered) LiquidCyan else LiquidTextPrimary, fontSize = 14.sp)
+                                    }
+                                }
+                            }
                         }
-                    )
-                    androidx.compose.material3.DropdownMenuItem(
-                        text = { Text(if (showPitchControl) "Hide Pitch Control" else "Show Pitch Control", color = LiquidTextPrimary) },
-                        onClick = {
-                            showSettingsMenu = false
-                            onTogglePitchControl()
-                        }
-                    )
-                    androidx.compose.material3.DropdownMenuItem(
-                        text = { Text(if (showMetronomeControl) "Hide Metronome Tool" else "Show Metronome Tool", color = LiquidTextPrimary) },
-                        onClick = {
-                            showSettingsMenu = false
-                            onToggleMetronomeControl()
-                        }
-                    )
-                    androidx.compose.material3.DropdownMenuItem(
-                        text = { Text(if (isBeatGridEnabled) "Hide Beat Grid" else "Show Beat Grid", color = LiquidTextPrimary) },
-                        onClick = {
-                            showSettingsMenu = false
-                            onToggleBeatGrid()
-                        }
-                    )
+                    }
                 }
             }
         }

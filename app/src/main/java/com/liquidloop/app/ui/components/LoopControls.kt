@@ -91,26 +91,10 @@ fun LoopControls(
         }
 
         // Marker A Fine Tuning Panel
-        MarkerTuningPanel(
-            title = "Marker A (Loop Start)",
-            timestamp = loopState.formattedStart,
-            markerValueMs = loopState.startMs,
-            durationMs = durationMs,
-            markerColor = MarkerAColor,
-            onValueChange = { onLoopPointsChanged(it, loopState.endMs) },
-            onSetCurrent = onSetAToCurrent
-        )
+        // Removed as per request
 
         // Marker B Fine Tuning Panel
-        MarkerTuningPanel(
-            title = "Marker B (Loop End)",
-            timestamp = loopState.formattedEnd,
-            markerValueMs = loopState.endMs,
-            durationMs = durationMs,
-            markerColor = MarkerBColor,
-            onValueChange = { onLoopPointsChanged(loopState.startMs, it) },
-            onSetCurrent = onSetBToCurrent
-        )
+        // Removed as per request
     }
 }
 
