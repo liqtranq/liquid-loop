@@ -159,11 +159,14 @@ fun WaveformCanvas(
                 if (bpm > 0) {
                     val beatIntervalMs = (60000f / bpm)
                     val multiplier = when (playbackState.gridResolutionIndex) {
-                        0 -> 2f * ts
-                        1 -> 1f * ts
-                        2 -> 1f
-                        3 -> 0.5f
-                        4 -> 0.25f
+                        0 -> 16f * ts
+                        1 -> 8f * ts
+                        2 -> 4f * ts
+                        3 -> 2f * ts
+                        4 -> 1f * ts
+                        5 -> 1f
+                        6 -> 0.5f
+                        7 -> 0.25f
                         else -> 1f
                     }
                     val gridIntervalMs = beatIntervalMs * multiplier

@@ -671,47 +671,11 @@ fun MusicalControls(
                                 }
                                 
                                 Text(
-                                    text = "${playbackState.bpm.toInt()} BPM  |  ",
+                                    text = "${playbackState.bpm.toInt()} BPM",
                                     color = LiquidCyan,
                                     fontSize = 11.sp,
                                     fontFamily = FontFamily.Monospace,
                                     modifier = Modifier.clickable { showBpmDialog = true }.padding(vertical = 4.dp)
-                                )
-
-                                var showTimeSigDialog by remember { mutableStateOf(false) }
-                                if (showTimeSigDialog) {
-                                    androidx.compose.material3.AlertDialog(
-                                        onDismissRequest = { showTimeSigDialog = false },
-                                        containerColor = LiquidSurface,
-                                        title = { Text("Time Signature", color = LiquidCyan) },
-                                        text = {
-                                            Column {
-                                                listOf(3, 4, 5, 6, 7).forEach { sig ->
-                                                    Text(
-                                                        text = "$sig/4",
-                                                        color = LiquidTextPrimary,
-                                                        fontSize = 18.sp,
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .clickable {
-                                                                onTimeSignatureChange(sig)
-                                                                showTimeSigDialog = false
-                                                            }
-                                                            .padding(12.dp)
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        confirmButton = {}
-                                    )
-                                }
-
-                                Text(
-                                    text = "${playbackState.timeSignature}/4",
-                                    color = LiquidCyan,
-                                    fontSize = 11.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.clickable { showTimeSigDialog = true }.padding(vertical = 4.dp)
                                 )
                             }
                         }
@@ -840,7 +804,7 @@ fun GridControls(
                             Column {
                                 listOf(3, 4, 5, 6, 7).forEach { sig ->
                                     Text(
-                                        text = "/4",
+                                        text = "${sig}/4",
                                         color = LiquidTextPrimary,
                                         fontSize = 18.sp,
                                         modifier = Modifier
@@ -864,7 +828,7 @@ fun GridControls(
                     modifier = Modifier.clickable { showTimeSigDialog = true }
                 ) {
                     Text(
-                        text = "Sig: /4",
+                        text = "Sig: ${playbackState.timeSignature}/4",
                         color = LiquidCyan,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -892,7 +856,7 @@ fun GridControls(
                 
                 // Resolution Slider
                 Column(modifier = Modifier.weight(1f)) {
-                    val labels = listOf("2 Bars", "1 Bar", "1", "1/2", "1/4")
+                    val labels = listOf("16B", "8B", "4B", "2B", "1B", "1", "1/2", "1/4")
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -901,7 +865,7 @@ fun GridControls(
                             Text(
                                 text = label,
                                 color = if (playbackState.gridResolutionIndex == index) LiquidCyan else LiquidTextSecondary,
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 fontWeight = if (playbackState.gridResolutionIndex == index) FontWeight.Bold else FontWeight.Normal
                             )
                         }
@@ -909,8 +873,8 @@ fun GridControls(
                     androidx.compose.material3.Slider(
                         value = playbackState.gridResolutionIndex.toFloat(),
                         onValueChange = { onGridResolutionChange(it.toInt()) },
-                        valueRange = 0f..4f,
-                        steps = 3,
+                        valueRange = 0f..7f,
+                        steps = 6,
                         colors = androidx.compose.material3.SliderDefaults.colors(
                             thumbColor = LiquidCyan,
                             activeTrackColor = LiquidCyan.copy(alpha = 0.7f),

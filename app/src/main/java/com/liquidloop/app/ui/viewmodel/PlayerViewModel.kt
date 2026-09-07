@@ -203,13 +203,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
         val beatIntervalMs = 60000f / state.bpm
         val ts = state.timeSignature
-        // gridResolutions: "2 Bars", "1 Bar", "1 Beat", "1/2 Beat", "1/4 Beat"
+        // gridResolutions: "16 Bars", "8 Bars", "4 Bars", "2 Bars", "1 Bar", "1 Beat", "1/2 Beat", "1/4 Beat"
         val multiplier = when (state.gridResolutionIndex) {
-            0 -> 2f * ts
-            1 -> 1f * ts
-            2 -> 1f
-            3 -> 0.5f
-            4 -> 0.25f
+            0 -> 16f * ts
+            1 -> 8f * ts
+            2 -> 4f * ts
+            3 -> 2f * ts
+            4 -> 1f * ts
+            5 -> 1f
+            6 -> 0.5f
+            7 -> 0.25f
             else -> 1f
         }
         val gridIntervalMs = beatIntervalMs * multiplier
