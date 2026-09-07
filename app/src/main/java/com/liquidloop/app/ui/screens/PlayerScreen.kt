@@ -31,6 +31,8 @@ import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Waves
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -394,8 +396,8 @@ fun LiquidTopBar(
                                 val items = listOf(
                                     if (showSpeedControl) "Hide Speed Control" else "Show Speed Control",
                                     if (showPitchControl) "Hide Pitch Control" else "Show Pitch Control",
-                                    if (showMetronomeControl) "Hide Metronome Tool" else "Show Metronome Tool",
-                                    if (isBeatGridEnabled) "Hide Beat Grid" else "Show Beat Grid"
+                                    if (showMetronomeControl) "Hide Metronome" else "Show Metronome",
+                                    if (isBeatGridEnabled) "Hide Grid" else "Show Grid"
                                 )
                                 items.forEachIndexed { index, text ->
                                     val isHovered = index == hoverIndex
@@ -553,7 +555,7 @@ fun MusicalControls(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Text(text = "Metronome Grid", color = LiquidTextPrimary, fontSize = 13.sp)
+                                Text(text = "Metronome", color = LiquidTextPrimary, fontSize = 13.sp)
                                 
                                 var tapTimes by remember { mutableStateOf(listOf<Long>()) }
                                 Surface(
@@ -754,4 +756,129 @@ fun UpdateDialog(
             }
         }
     )
+}
+
+
+@Composable
+fun GridControls(
+    playbackState: com.liquidloop.app.model.PlaybackState,
+    onTimeSignatureChange: (Int) -> Unit,
+    onGridResolutionChange: (Int) -> Unit,
+    onToggleSnap: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = LiquidSurface),
+        border = BorderStroke(1.dp, LiquidCardBorder)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(androidx.compose.material.icons.Icons.Default.Menu, contentDescription = "Grid", tint = LiquidCyan)
+                    Text(text = "Grid & Snap", color = LiquidTextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+                
+                // Time Signature Dialog
+                var showTimeSigDialog by remember { mutableStateOf(false) }
+                if (showTimeSigDialog) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { showTimeSigDialog = false },
+                        containerColor = LiquidSurface,
+                        title = { Text("Time Signature", color = LiquidCyan) },
+                        text = {
+                            Column {
+                                listOf(3, 4, 5, 6, 7).forEach { sig ->
+                                    Text(
+                                        text = "/4",
+                                        color = LiquidTextPrimary,
+                                        fontSize = 18.sp,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                onTimeSignatureChange(sig)
+                                                showTimeSigDialog = false
+                                            }
+                                            .padding(12.dp)
+                                    )
+                                }
+                            }
+                        },
+                        confirmButton = {}
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = LiquidSurfaceVariant,
+                    modifier = Modifier.clickable { showTimeSigDialog = true }
+                ) {
+                    Text(
+                        text = "Sig: /4",
+                        color = LiquidCyan,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Snap Toggle
+                IconButton(
+                    onClick = onToggleSnap,
+                    modifier = Modifier.size(36.dp).clip(CircleShape).background(if (playbackState.isSnapEnabled) LiquidCyan else LiquidSurfaceVariant)
+                ) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Add,
+                        contentDescription = "Snap to Grid",
+                        tint = if (playbackState.isSnapEnabled) Color.Black else LiquidCyan,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                
+                // Resolution Slider
+                Column(modifier = Modifier.weight(1f)) {
+                    val labels = listOf("2 Bars", "1 Bar", "1", "1/2", "1/4")
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        labels.forEachIndexed { index, label ->
+                            Text(
+                                text = label,
+                                color = if (playbackState.gridResolutionIndex == index) LiquidCyan else LiquidTextSecondary,
+                                fontSize = 11.sp,
+                                fontWeight = if (playbackState.gridResolutionIndex == index) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    }
+                    androidx.compose.material3.Slider(
+                        value = playbackState.gridResolutionIndex.toFloat(),
+                        onValueChange = { onGridResolutionChange(it.toInt()) },
+                        valueRange = 0f..4f,
+                        steps = 3,
+                        colors = androidx.compose.material3.SliderDefaults.colors(
+                            thumbColor = LiquidCyan,
+                            activeTrackColor = LiquidCyan.copy(alpha = 0.7f),
+                            inactiveTrackColor = LiquidSurfaceVariant
+                        )
+                    )
+                }
+            }
+        }
+    }
 }

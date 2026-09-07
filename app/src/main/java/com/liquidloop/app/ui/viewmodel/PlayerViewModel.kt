@@ -184,8 +184,37 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         audioController.seekTo(positionMs)
     }
 
+    fun toggleSnap() {
+        audioController.toggleSnap()
+    }
+
+    fun setGridResolutionIndex(index: Int) {
+        audioController.setGridResolutionIndex(index)
+    }
+
+    private fun snapTime(timeMs: Long): Long {
+        val state = audioController.playbackState.value
+        if (!state.isSnapEnabled || state.bpm <= 0) return timeMs
+
+        val beatIntervalMs = 60000f / state.bpm
+        val ts = state.timeSignature
+        // gridResolutions: "2 Bars", "1 Bar", "1 Beat", "1/2 Beat", "1/4 Beat"
+        val multiplier = when (state.gridResolutionIndex) {
+            0 -> 2f * ts
+            1 -> 1f * ts
+            2 -> 1f
+            3 -> 0.5f
+            4 -> 0.25f
+            else -> 1f
+        }
+        val gridIntervalMs = beatIntervalMs * multiplier
+        return (Math.round(timeMs / gridIntervalMs) * gridIntervalMs).toLong()
+    }
+
     fun setLoopPoints(startMs: Long, endMs: Long) {
-        audioController.setLoopPoints(startMs, endMs)
+        val snappedStart = snapTime(startMs)
+        val snappedEnd = snapTime(endMs)
+        audioController.setLoopPoints(snappedStart, snappedEnd)
     }
 
     fun nudgeLoopA(deltaMs: Long) {

@@ -158,21 +158,31 @@ fun WaveformCanvas(
                 val ts = playbackState.timeSignature
                 if (bpm > 0) {
                     val beatIntervalMs = (60000f / bpm)
-                    var currentBeatMs = 0f
-                    var beatCount = 0
-                    while (currentBeatMs < durationMs) {
-                        val x = (currentBeatMs / durationMs) * virtualWidth
-                        val isDownbeat = (beatCount % ts == 0)
+                    val multiplier = when (playbackState.gridResolutionIndex) {
+                        0 -> 2f * ts
+                        1 -> 1f * ts
+                        2 -> 1f
+                        3 -> 0.5f
+                        4 -> 0.25f
+                        else -> 1f
+                    }
+                    val gridIntervalMs = beatIntervalMs * multiplier
+                    var currentGridMs = 0f
+                    var lineCount = 0
+                    while (currentGridMs < durationMs) {
+                        val x = (currentGridMs / durationMs) * virtualWidth
+                        // Emphasize downbeats or bar lines if it matches
+                        val isBarLine = (currentGridMs % (beatIntervalMs * ts) < 5f)
                         
                         drawLine(
-                            color = if (isDownbeat) LiquidPurpleLight.copy(alpha = 0.3f) else LiquidTextMuted.copy(alpha = 0.1f),
+                            color = if (isBarLine) LiquidPurpleLight.copy(alpha = 0.4f) else LiquidTextMuted.copy(alpha = 0.15f),
                             start = Offset(x, 0f),
                             end = Offset(x, canvasHeight),
-                            strokeWidth = if (isDownbeat) 2f else 1f
+                            strokeWidth = if (isBarLine) 2f else 1f
                         )
                         
-                        currentBeatMs += beatIntervalMs
-                        beatCount++
+                        currentGridMs += gridIntervalMs
+                        lineCount++
                     }
                 }
             }

@@ -347,6 +347,14 @@ class LiquidAudioController(private val context: Context) {
         _playbackState.update { it.copy(timeSignature = ts) }
     }
 
+    fun toggleSnap() {
+        _playbackState.update { it.copy(isSnapEnabled = !it.isSnapEnabled) }
+    }
+
+    fun setGridResolutionIndex(index: Int) {
+        _playbackState.update { it.copy(gridResolutionIndex = index) }
+    }
+
     fun release() {
         progressPollingJob?.cancel()
         controllerFuture?.let {

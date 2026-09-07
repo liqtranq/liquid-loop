@@ -9,7 +9,9 @@ data class PlaybackState(
     val pitch: Float = 1.0f,
     val isMetronomeEnabled: Boolean = false,
     val bpm: Float = 120f,
-    val timeSignature: Int = 4
+    val timeSignature: Int = 4,
+    val isSnapEnabled: Boolean = false,
+    val gridResolutionIndex: Int = 3 // 3 = 1/4 note (1 Beat)
 ) {
     val progress: Float
         get() = if (durationMs > 0) (currentPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
