@@ -25,9 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Waves
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Timer
@@ -65,7 +62,6 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.input.pointer.pointerInput
-import com.liquidloop.app.model.TrackInfo
 import com.liquidloop.app.ui.components.LoopControls
 import com.liquidloop.app.ui.components.PlaybackControls
 import com.liquidloop.app.ui.components.TrackHeader
@@ -86,8 +82,6 @@ import com.liquidloop.app.ui.viewmodel.PlayerViewModel
 fun PlayerScreen(
     viewModel: PlayerViewModel,
     onImportAudio: () -> Unit,
-    onEnterPiP: () -> Unit,
-    onLaunchFloatingWidget: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val currentTrack by viewModel.currentTrack.collectAsState()
@@ -95,7 +89,6 @@ fun PlayerScreen(
     val loopState by viewModel.loopState.collectAsState()
     val waveform by viewModel.waveform.collectAsState()
     val isLoadingWaveform by viewModel.isLoadingWaveform.collectAsState()
-    val isInPiP by viewModel.isInPictureInPicture.collectAsState()
     val updateInfo by viewModel.updateInfo.collectAsState()
     val manualUpdateInfo by viewModel.manualUpdateInfo.collectAsState()
     
@@ -143,148 +136,135 @@ fun PlayerScreen(
         )
     }
 
-    if (isInPiP) {
-        // Compact Picture-in-Picture UI
-        PiPPlayerContent(
-            trackInfo = currentTrack,
-            isPlaying = playbackState.isPlaying,
-            currentPosition = playbackState.formattedPosition,
-            loopDuration = loopState.formattedDuration,
-            onTogglePlayPause = { viewModel.togglePlayPause() },
-            onRestartLoop = { viewModel.restartLoop() }
-        )
-    } else {
-                // Fullscreen Liquid Player UI
-        Scaffold(
-            containerColor = LiquidBackground,
-            topBar = {
-                LiquidTopBar(
-                    onUpdateClick = { viewModel.checkUpdatesManually() },
-                    showSpeedControl = showSpeedControl,
-                    showPitchControl = showPitchControl,
-                    showMetronomeControl = showMetronomeControl,
-                    isBeatGridEnabled = isBeatGridEnabled,
-                    onToggleSpeedControl = { viewModel.toggleSpeedControl() },
-                    onTogglePitchControl = { viewModel.togglePitchControl() },
-                    onToggleMetronomeControl = { viewModel.toggleMetronomeControl() },
-                    onToggleBeatGrid = { viewModel.toggleBeatGrid() }
-                )
-            }
-        ) { innerPadding ->
-            Column(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+    Scaffold(
+        containerColor = LiquidBackground,
+        topBar = {
+            LiquidTopBar(
+                onUpdateClick = { viewModel.checkUpdatesManually() },
+                showSpeedControl = showSpeedControl,
+                showPitchControl = showPitchControl,
+                showMetronomeControl = showMetronomeControl,
+                isBeatGridEnabled = isBeatGridEnabled,
+                onToggleSpeedControl = { viewModel.toggleSpeedControl() },
+                onTogglePitchControl = { viewModel.togglePitchControl() },
+                onToggleMetronomeControl = { viewModel.toggleMetronomeControl() },
+                onToggleBeatGrid = { viewModel.toggleBeatGrid() }
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // 1. Track Info Header Card
+            TrackHeader(
+                trackInfo = currentTrack,
+                onImportClick = onImportAudio
+            )
+
+            // 2. Waveform Visualizer Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = LiquidSurface),
+                border = BorderStroke(1.dp, LiquidCardBorder)
             ) {
-                // 1. Track Info Header Card
-                TrackHeader(
-                    trackInfo = currentTrack,
-                    onImportClick = onImportAudio
-                )
-
-                // 2. Waveform Visualizer Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = LiquidSurface),
-                    border = BorderStroke(1.dp, LiquidCardBorder)
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    // Waveform Header: Current Position / Total Track Time
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Waveform Header: Current Position / Total Track Time
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = playbackState.formattedPosition,
+                        Text(
+                            text = playbackState.formattedPosition,
+                            color = LiquidCyan,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace
+                        )
+                        Text(
+                            text = currentTrack.formattedDuration,
+                            color = LiquidTextSecondary,
+                            fontSize = 13.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+
+                    // Canvas Waveform with A-B handles
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        WaveformCanvas(
+                            waveform = waveform,
+                            playbackState = playbackState,
+                            loopState = loopState,
+                            isBeatGridEnabled = isBeatGridEnabled,
+                            onSeek = { viewModel.seekTo(it) },
+                            onLoopPointsChanged = { a, b -> viewModel.setLoopPoints(a, b) }
+                        )
+
+                        if (isLoadingWaveform) {
+                            CircularProgressIndicator(
                                 color = LiquidCyan,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Monospace
+                                strokeWidth = 3.dp,
+                                modifier = Modifier.size(36.dp)
                             )
-                            Text(
-                                text = currentTrack.formattedDuration,
-                                color = LiquidTextSecondary,
-                                fontSize = 13.sp,
-                                fontFamily = FontFamily.Monospace
-                            )
-                        }
-
-                        // Canvas Waveform with A-B handles
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            WaveformCanvas(
-                                waveform = waveform,
-                                playbackState = playbackState,
-                                loopState = loopState,
-                                isBeatGridEnabled = isBeatGridEnabled,
-                                onSeek = { viewModel.seekTo(it) },
-                                onLoopPointsChanged = { a, b -> viewModel.setLoopPoints(a, b) }
-                            )
-
-                            if (isLoadingWaveform) {
-                                CircularProgressIndicator(
-                                    color = LiquidCyan,
-                                    strokeWidth = 3.dp,
-                                    modifier = Modifier.size(36.dp)
-                                )
-                            }
                         }
                     }
                 }
-
-
-                // 3. Loop Controls (General A-B Slider & Stats)
-                com.liquidloop.app.ui.components.LoopControls(
-                    loopState = loopState,
-                    durationMs = playbackState.durationMs,
-                    onLoopPointsChanged = { a, b -> viewModel.setLoopPoints(a, b) },
-                    onNudgeA = { viewModel.nudgeLoopA(it) },
-                    onNudgeB = { viewModel.nudgeLoopB(it) },
-                    onSetAToCurrent = { viewModel.setPointAToCurrent() },
-                    onSetBToCurrent = { viewModel.setPointBToCurrent() }
-                )
-                PlaybackControls(
-                    playbackState = playbackState,
-                    loopState = loopState,
-                    onTogglePlayPause = { viewModel.togglePlayPause() },
-                    onRestartLoop = { viewModel.restartLoop() },
-                    onToggleLoop = { viewModel.toggleLoop() },
-                    onSpeedChange = { viewModel.setPlaybackSpeed(it) },
-                    showSpeedControl = showSpeedControl
-                )
-
-                // 5. Musical Tools (Pitch, Metronome)
-                MusicalControls(
-                    playbackState = playbackState,
-                    showPitchControl = showPitchControl,
-                    showMetronomeControl = showMetronomeControl,
-                    onPitchChange = { viewModel.setPitch(it) },
-                    onToggleMetronome = { viewModel.toggleMetronome() },
-                    onBpmChange = { viewModel.setBpm(it) },
-                    onTimeSignatureChange = { viewModel.setTimeSignature(it) }
-                )
-
-                if (isBeatGridEnabled) {
-                    GridControls(
-                        playbackState = playbackState,
-                        onTimeSignatureChange = { viewModel.setTimeSignature(it) },
-                        onGridResolutionChange = { viewModel.setGridResolutionIndex(it) },
-                        onToggleSnap = { viewModel.toggleSnap() }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
             }
+
+
+            // 3. Loop Controls (General A-B Slider & Stats)
+            com.liquidloop.app.ui.components.LoopControls(
+                loopState = loopState,
+                durationMs = playbackState.durationMs,
+                onLoopPointsChanged = { a, b -> viewModel.setLoopPoints(a, b) },
+                onNudgeA = { viewModel.nudgeLoopA(it) },
+                onNudgeB = { viewModel.nudgeLoopB(it) },
+                onSetAToCurrent = { viewModel.setPointAToCurrent() },
+                onSetBToCurrent = { viewModel.setPointBToCurrent() }
+            )
+            PlaybackControls(
+                playbackState = playbackState,
+                loopState = loopState,
+                onTogglePlayPause = { viewModel.togglePlayPause() },
+                onRestartLoop = { viewModel.restartLoop() },
+                onToggleLoop = { viewModel.toggleLoop() },
+                onSpeedChange = { viewModel.setPlaybackSpeed(it) },
+                showSpeedControl = showSpeedControl
+            )
+
+            // 5. Musical Tools (Pitch, Metronome)
+            MusicalControls(
+                playbackState = playbackState,
+                showPitchControl = showPitchControl,
+                showMetronomeControl = showMetronomeControl,
+                onPitchChange = { viewModel.setPitch(it) },
+                onToggleMetronome = { viewModel.toggleMetronome() },
+                onBpmChange = { viewModel.setBpm(it) },
+                onTimeSignatureChange = { viewModel.setTimeSignature(it) }
+            )
+
+            if (isBeatGridEnabled) {
+                GridControls(
+                    playbackState = playbackState,
+                    onTimeSignatureChange = { viewModel.setTimeSignature(it) },
+                    onGridResolutionChange = { viewModel.setGridResolutionIndex(it) },
+                    onToggleSnap = { viewModel.toggleSnap() }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -455,78 +435,6 @@ fun LiquidTopBar(
                             }
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun PiPPlayerContent(
-    trackInfo: TrackInfo,
-    isPlaying: Boolean,
-    currentPosition: String,
-    loopDuration: String,
-    onTogglePlayPause: () -> Unit,
-    onRestartLoop: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = LiquidBackground
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = trackInfo.title,
-                color = Color.White,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = "$currentPosition · Loop: $loopDuration",
-                color = LiquidCyan,
-                fontSize = 9.sp,
-                fontFamily = FontFamily.Monospace
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onRestartLoop,
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Replay,
-                        contentDescription = "Restart Loop",
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                IconButton(
-                    onClick = onTogglePlayPause,
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(LiquidCyan)
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = LiquidBackground,
-                        modifier = Modifier.size(20.dp)
-                    )
                 }
             }
         }

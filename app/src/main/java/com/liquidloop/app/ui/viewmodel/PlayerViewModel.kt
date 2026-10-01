@@ -34,9 +34,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val _isLoadingWaveform = MutableStateFlow(false)
     val isLoadingWaveform: StateFlow<Boolean> = _isLoadingWaveform.asStateFlow()
 
-    private val _isInPictureInPicture = MutableStateFlow(false)
-    val isInPictureInPicture: StateFlow<Boolean> = _isInPictureInPicture.asStateFlow()
-
     private val _updateInfo = MutableStateFlow<com.liquidloop.app.core.network.UpdateChecker.UpdateInfo?>(null)
     val updateInfo: StateFlow<com.liquidloop.app.core.network.UpdateChecker.UpdateInfo?> = _updateInfo.asStateFlow()
 
@@ -267,10 +264,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setTimeSignature(ts: Int) {
         audioController.setTimeSignature(ts)
-    }
-
-    fun setPictureInPicture(isInPiP: Boolean) {
-        _isInPictureInPicture.value = isInPiP
     }
 
     override fun onCleared() {
