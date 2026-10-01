@@ -11,5 +11,4 @@
     <string name="loop_active">Loop Mode ON</string>
     <string name="loop_inactive">Loop Mode OFF</string>
     <string name="restart_loop">Restart Loop (A)</string>
-    <string name="floating_overlay_title">LiquidLoop Floating Overlay</string>
 </resources>

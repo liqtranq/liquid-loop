@@ -37,6 +37,8 @@ class LiquidAudioController(private val context: Context) {
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
+    /** Track selected before MediaController finished connecting; flushed on connect. */
+    private var pendingTrack: TrackInfo? = null
 
     private val _playbackState = MutableStateFlow(PlaybackState())
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
@@ -104,6 +106,7 @@ class LiquidAudioController(private val context: Context) {
                 mediaController = controllerFuture?.get()
                 setupControllerListener()
                 startProgressPolling()
+                flushPendingTrack()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -163,9 +166,25 @@ class LiquidAudioController(private val context: Context) {
     }
 
     fun loadTrack(track: TrackInfo) {
-        val controller = mediaController ?: return
         _currentTrack.value = track
+        val controller = mediaController
+        if (controller == null) {
+            // MediaController not ready yet — queue and apply once connected
+            pendingTrack = track
+            return
+        }
+        pendingTrack = null
+        applyLoadTrack(controller, track)
+    }
 
+    private fun flushPendingTrack() {
+        val track = pendingTrack ?: return
+        pendingTrack = null
+        val controller = mediaController ?: return
+        applyLoadTrack(controller, track)
+    }
+
+    private fun applyLoadTrack(controller: MediaController, track: TrackInfo) {
         var detectedBpm: Float? = null
         val bpmRegex = Regex("(?i)(\\d{2,3})\\s*bpm")
         
@@ -357,6 +376,7 @@ class LiquidAudioController(private val context: Context) {
 
     fun release() {
         progressPollingJob?.cancel()
+        pendingTrack = null
         controllerFuture?.let {
             MediaController.releaseFuture(it)
         }
